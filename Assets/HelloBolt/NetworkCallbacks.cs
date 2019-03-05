@@ -10,9 +10,14 @@ public class NetworkCallbacks : Bolt.GlobalEventListener
 
     public override void SceneLoadLocalDone(string scene)
     {
-        Vector3 spawn_pos = new Vector3(Random.Range(-8,8), 0, Random.Range(-8,8));
+        Vector3 spawn_pos = new Vector3(Random.Range(-4,4), 2, Random.Range(-4,4));
 
-        BoltNetwork.Instantiate(BoltPrefabs.robot, spawn_pos, Quaternion.identity);
+        Debug.LogFormat("scene {0} loadLocalDone", scene);
+
+        BoltEntity body = BoltNetwork.Instantiate(BoltPrefabs.ballFighter, spawn_pos, Quaternion.identity);
+        BoltEntity moon = BoltNetwork.Instantiate(BoltPrefabs.moon, spawn_pos + Vector3.right * 0.5f, Quaternion.identity);
+        body.GetComponent<BallFighter>().SetupRolling(moon);
+        // BoltNetwork.Instantiate(BoltPrefabs.robot, spawn_pos, Quaternion.identity);
     }
 
     public override void OnEvent(LogEvent evnt)

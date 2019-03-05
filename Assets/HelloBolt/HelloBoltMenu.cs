@@ -32,7 +32,8 @@ public class HelloBoltMenu : Bolt.GlobalEventListener
 			string matchName = Guid.NewGuid().ToString();
 
 			BoltNetwork.SetServerInfo(matchName, null);
-			BoltNetwork.LoadScene("helloBolt");
+			BoltNetwork.LoadScene("rolling");
+			// BoltNetwork.LoadScene("helloBolt");
 		}
 	}
 

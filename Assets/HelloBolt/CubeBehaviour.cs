@@ -44,6 +44,15 @@ public class CubeBehaviour : Bolt.EntityEventListener<ICubeState>
         });
     }
 
+    private void OnGUI() {
+        if(entity.isOwner)
+        {
+            GUI.color = state.CubeColor;
+            GUILayout.Label("@@@");
+            GUI.color = Color.white;
+        }
+    }
+
     public override void SimulateOwner()
     {
 		var speed = 4f;
@@ -72,15 +81,6 @@ public class CubeBehaviour : Bolt.EntityEventListener<ICubeState>
             flash.Send();
         }
 	}
-
-    private void OnGUI() {
-        if(entity.isOwner)
-        {
-            GUI.color = state.CubeColor;
-            GUILayout.Label("@@@");
-            GUI.color = Color.white;
-        }
-    }
 
     public override void OnEvent(FlashColorEvt evnt)
     {

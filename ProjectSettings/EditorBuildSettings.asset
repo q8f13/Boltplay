@@ -9,6 +9,6 @@ EditorBuildSettings:
     path: Assets/HelloBolt/helloBoltMenu.unity
     guid: bb7ee64f3c8114747a21998998993411
   - enabled: 1
-    path: Assets/HelloBolt/helloBolt.unity
-    guid: 79e7303ef4bad174ca398f429e538fe5
+    path: Assets/Rolling/rolling.unity
+    guid: ff4a6e686b8d353498e8621fd5967c3e
   m_configObjects: {}
