@@ -27,7 +27,7 @@ public class HelloBoltMenu : Bolt.GlobalEventListener
 
 	public override void BoltStartDone()
 	{
-		if (BoltNetwork.isServer)
+		if (BoltNetwork.IsServer)
 		{
 			string matchName = Guid.NewGuid().ToString();
 
