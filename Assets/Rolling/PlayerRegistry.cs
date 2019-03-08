@@ -57,7 +57,7 @@ public class PlayPlayerObject
 
 	private BallFighter _body;
 	public BallFighter GetBody{get{return _body;}}
-	public BoltEntity GetMoon{get{return _body.MoonEntity;}}
+	// public BoltEntity GetMoon{get{return _body.MoonEntity;}}
 
 	public bool IsServer
 	{
@@ -75,9 +75,9 @@ public class PlayPlayerObject
 		if(!Char)
 		{
 			Char = BoltNetwork.Instantiate(BoltPrefabs.ballFighter, Vector3.zero, Quaternion.identity);
-			BoltEntity moon = BoltNetwork.Instantiate(BoltPrefabs.moon, Vector3.zero, Quaternion.identity);
+			// BoltEntity moon = BoltNetwork.Instantiate(BoltPrefabs.moon, Vector3.zero, Quaternion.identity);
 			_body = Char.GetComponent<BallFighter>();
-			_body.SetupRolling(moon);
+			// _body.SetupRolling(moon);
 
 			if(IsServer)
 				Char.TakeControl();
@@ -86,7 +86,7 @@ public class PlayPlayerObject
 		}
 
 		Char.transform.position = spawn_pos;
-		_body.MoonRig.transform.position = spawn_pos + Vector3.right * 0.5f;
+		// _body.MoonRig.transform.position = spawn_pos + Vector3.right * 0.5f;
 
 		return this;
 	}

@@ -122,6 +122,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b884be51368c214fba3932998e20db3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  MoonPrefab: {fileID: 178, guid: f8098a300c62a76458d08963f446b83c, type: 3}
   _forceMultiplier: 30
   _input: 1
 --- !u!114 &285

@@ -4,6 +4,18 @@ using System.Collections.Generic;
 
 public class LogicSync
 {
+	private static LogicSync _instance = new LogicSync();
+	public static LogicSync Instance{
+		get{
+			if(_instance == null)
+				_instance = new LogicSync();
+			return _instance;
+		}
+	}
+
+	private LogicSync()
+	{
+	}
 
 	public void Tick()
 	{
