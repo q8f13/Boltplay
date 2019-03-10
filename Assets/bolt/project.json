@@ -846,6 +846,7 @@
         {
           "Name": "RigPosition",
           "Enabled": true,
+          "Expanded": true,
           "ReplicationMode": 1,
           "Priority": 1,
           "PropertyType": {
@@ -853,31 +854,34 @@
             "Selection": 14,
             "Compression": [
               {
-                "MinValue": -1024,
-                "MaxValue": 1024,
+                "MinValue": -20,
+                "MaxValue": 20,
                 "Accuracy": 0.01,
+                "Enabled": true,
                 "Pack": 100.0,
                 "Read": 0.01,
-                "Shift": 1024.0,
-                "BitsRequired": 18
+                "Shift": 20.0,
+                "BitsRequired": 12
               },
               {
-                "MinValue": -1024,
-                "MaxValue": 1024,
+                "MinValue": -5,
+                "MaxValue": 5,
                 "Accuracy": 0.01,
+                "Enabled": true,
                 "Pack": 100.0,
                 "Read": 0.01,
-                "Shift": 1024.0,
-                "BitsRequired": 18
+                "Shift": 5.0,
+                "BitsRequired": 10
               },
               {
-                "MinValue": -1024,
-                "MaxValue": 1024,
+                "MinValue": -20,
+                "MaxValue": 20,
                 "Accuracy": 0.01,
+                "Enabled": true,
                 "Pack": 100.0,
                 "Read": 0.01,
-                "Shift": 1024.0,
-                "BitsRequired": 18
+                "Shift": 20.0,
+                "BitsRequired": 12
               }
             ]
           },
@@ -888,6 +892,7 @@
         {
           "Name": "RigRotation",
           "Enabled": true,
+          "Expanded": true,
           "ReplicationMode": 1,
           "Priority": 1,
           "PropertyType": {

@@ -11,6 +11,8 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 	private Dictionary<string, InputSender> _playerInputRelay = new Dictionary<string, InputSender>();
 
+	private PlayPlayerObject _serverPlayer;
+
 	private void Start() 
 	{
 		PlayerRegistry.CreatePlayerOnHost();
@@ -21,6 +23,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 		PlayPlayerObject server_player = PlayerRegistry.ServerPlayer.Spawn();
 		string id = server_player.Char.networkId.PackedValue.ToString();
 		_players.Add(id, server_player.GetBody.Rig);
+		_serverPlayer = server_player;
 	}
 
 	public override void SceneLoadRemoteDone(BoltConnection connection)
@@ -55,7 +58,19 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 		return true;
 	}
 
+	public override void OnEvent(StateMsg evnt)
+	{
+		_serverPlayer.GetBody.ReceiveState(evnt);
+	}
+
 	private void Update() {
+		// send input from server player
+		if(_serverPlayer != null)
+		{
+			_serverPlayer.GetBody.LocalSimulateTick(false);
+		}
+
+		// collect player inputs and simulate them with same step
         while(!PlayerInputEmpty())
         {
             // receive one inputMsg and simulate on server side
