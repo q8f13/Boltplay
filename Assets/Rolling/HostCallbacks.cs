@@ -93,7 +93,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 				// create simulate result and reply to client
 				// for client prediction error correcting
-				StateMsg state = StateMsg.Create(Bolt.GlobalTargets.Everyone);
+				StateMsg state = StateMsg.Create(Bolt.GlobalTargets.AllClients);
 				// ball
 				state.RigPosition = playerRig.position;
 				state.RigRotation = playerRig.rotation;

@@ -24,7 +24,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     private InputSource _input;
 
     private SpringJoint _moon;
-    private BoltEntity _moonEntity;
+    // private BoltEntity _moonEntity;
     public Rigidbody MoonRig{
         get
         {
@@ -34,7 +34,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         }
     }
     private Rigidbody _moonRig;
-    public BoltEntity MoonEntity{get{return _moonEntity;}}
+    // public BoltEntity MoonEntity{get{return _moonEntity;}}
 
     private Vector2 _currentInput;
     public Vector2 CurrentInput{get{return _currentInput;}}
@@ -73,6 +73,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
         // set color
         state.SetTransforms(state.BallTransform, transform);
+        state.SetTransforms(state.MoonTransform, _moon.transform);
 
         if(entity.isOwner)
         {
@@ -92,11 +93,24 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             _rig.angularVelocity = state.BallRig.AngulalrVelocity;
         });
 
+         state.addcallback("balltransform", ()=>
+        {
+            transform.position = state.balltransform.position;
+            transform.rotation = state.balltransform.rotation;
+        }); */ 
+
         state.AddCallback("BallTransform", ()=>
         {
             transform.position = state.BallTransform.Position;
             transform.rotation = state.BallTransform.Rotation;
-        }); */
+        });
+
+        state.AddCallback("MoonTransform", ()=>
+        {
+            _moon.transform.position = state.BallTransform.Position;
+            _moon.transform.rotation = state.BallTransform.Rotation;
+            _moon.transform.localScale = Vector3.one * 0.5f;
+        });
 
         _attached = true;
     }
@@ -133,7 +147,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
             // if(withSimulate)
             //     Physics.Simulate(Time.fixedDeltaTime);
-
             ++_tickNumber;
         }
     }
@@ -143,7 +156,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         return entity.networkId.PackedValue.ToString();
     }
 
-    private void Update() 
+    private void FixedUpdate() 
     {
         UpdateAndCheckRewindTickCatched();
     }
@@ -154,8 +167,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         while(_stateMsgReceived.Count > 0)
         {
             StateMsg state = _stateMsgReceived.Dequeue();
-            if(BoltNetwork.IsClient)
-                RewindTick(state);
+            RewindTick(state);
         }
     }
 
@@ -197,8 +209,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 _clientStateBuffer[rw_slot].MoonRotation = MoonRig.rotation;
 
                 AddForceToRigid(state.StateInput);
-
-                // Physics.Simulate(Time.fixedDeltaTime);
 
                 ++rewind_tick_number;
             }
