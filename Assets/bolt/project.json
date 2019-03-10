@@ -773,22 +773,24 @@
             "Selection": 6,
             "Compression": [
               {
-                "MinValue": -1024,
-                "MaxValue": 1024,
+                "MinValue": -1,
+                "MaxValue": 1,
                 "Accuracy": 0.01,
+                "Enabled": true,
                 "Pack": 100.0,
                 "Read": 0.01,
-                "Shift": 1024.0,
-                "BitsRequired": 18
+                "Shift": 1.0,
+                "BitsRequired": 8
               },
               {
-                "MinValue": -1024,
-                "MaxValue": 1024,
+                "MinValue": -1,
+                "MaxValue": 1,
                 "Accuracy": 0.01,
+                "Enabled": true,
                 "Pack": 100.0,
                 "Read": 0.01,
-                "Shift": 1024.0,
-                "BitsRequired": 18
+                "Shift": 1.0,
+                "BitsRequired": 8
               },
               {
                 "MinValue": -1024,
@@ -1133,6 +1135,7 @@
         {
           "Name": "MoonRotation",
           "Enabled": true,
+          "Expanded": true,
           "ReplicationMode": 1,
           "Priority": 1,
           "PropertyType": {

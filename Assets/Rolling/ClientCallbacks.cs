@@ -69,8 +69,19 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 		GUILayout.EndHorizontal();
 	}
 
+	private void Update() 
+	{
+		if(!string.IsNullOrEmpty(_thisClientId))
+			_players[_thisClientId].LocalSimulateTick(true);
+		// foreach (BallFighter bf in _players.Values)
+		// {
+		// 	if(bf.)
+		// }
+	}
+
 	private void FixedUpdate() {
 		Physics.Simulate(Time.fixedDeltaTime);
+		Physics.SyncTransforms();
 	}
 }
 

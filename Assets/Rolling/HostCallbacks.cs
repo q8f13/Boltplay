@@ -58,17 +58,10 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 		return true;
 	}
 
-	public override void OnEvent(StateMsg evnt)
-	{
-		_serverPlayer.GetBody.ReceiveState(evnt);
-	}
-
 	private void Update() {
 		// send input from server player
 		if(_serverPlayer != null)
-		{
 			_serverPlayer.GetBody.LocalSimulateTick(false);
-		}
 
 		// collect player inputs and simulate them with same step
         while(!PlayerInputEmpty())
@@ -76,7 +69,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
             // receive one inputMsg and simulate on server side
 			foreach(string id in _playerInputs.Keys)
 			{
-				if(_playerInputs[id].Peek() == null)
+				if(_playerInputs[id].Count == 0)
 					continue;
 
 				InputSender evt = _playerInputs[id].Dequeue();
@@ -90,7 +83,8 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 					_playerInputRelay.Add(id, evt);
 			}
 
-            Physics.Simulate(Time.fixedDeltaTime);
+			Physics.Simulate(Time.fixedDeltaTime);
+			Physics.SyncTransforms();
 
 			foreach(string id in _playerInputRelay.Keys)
 			{

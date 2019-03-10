@@ -51,17 +51,25 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     private Queue<StateMsg> _stateMsgReceived = new Queue<StateMsg>();
     #endregion
 
+    private void Awake() {
+    }
+
     public override void Attached()
     {
         _rig = GetComponent<Rigidbody>();
         _mr =GetComponent<MeshRenderer>();
 
         // initialize moon
-        // GameObject moon_go = Instantiate(MoonPrefab);
-        // _moon = moon_go.GetComponent<SpringJoint>();
-        // _moon.connectedBody = Rig;
-        // _moon.autoConfigureConnectedAnchor = false;
-		// moon_go.transform.position = transform.position + Vector3.right * 0.5f;
+        GameObject moon_go = Instantiate(MoonPrefab, transform.position + Vector3.right * 0.5f, Quaternion.identity);
+        _moon = moon_go.GetComponent<SpringJoint>();
+        _moon.connectedBody = Rig;
+        _moon.autoConfigureConnectedAnchor = false;
+        _moon.anchor = Vector3.up * 0.5f;
+        _moon.connectedAnchor = Vector3.up * 0.25f;
+        _moon.spring = 30;
+        _moon.damper = 0.2f;
+        _moon.enableCollision = true;
+        _moon.enablePreprocessing = true;
 
         // set color
         state.SetTransforms(state.BallTransform, transform);
@@ -95,6 +103,9 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
     public void LocalSimulateTick(bool withSimulate)
     {
+        if(!_attached)
+            return;
+
         _timer += Time.deltaTime;
         while(_timer >= Time.fixedDeltaTime)
         {
@@ -112,10 +123,13 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             _clientInputBuffer[slot] = input;
             _clientStateBuffer[slot].Position = Rig.position;
             _clientStateBuffer[slot].Rotation = Rig.rotation;
-            // _clientStateBuffer[slot].MoonPosition = MoonRig.position;
-            // _clientStateBuffer[slot].MoonRotation = MoonRig.rotation;
+            _clientStateBuffer[slot].MoonPosition = MoonRig.position;
+            _clientStateBuffer[slot].MoonRotation = MoonRig.rotation;
 
-            AddForceToRigid(input);
+            if(withSimulate)
+            {
+                AddForceToRigid(input);
+            }
 
             // if(withSimulate)
             //     Physics.Simulate(Time.fixedDeltaTime);
@@ -140,7 +154,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         while(_stateMsgReceived.Count > 0)
         {
             StateMsg state = _stateMsgReceived.Dequeue();
-            RewindTick(state);
+            if(BoltNetwork.IsClient)
+                RewindTick(state);
         }
     }
 
@@ -151,9 +166,10 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         int slot = state.TickNumber % 1024;
         Vector3 position_err = state.RigPosition - this._clientStateBuffer[slot].Position;
         Vector3 moon_position_err = state.MoonPosition - this._clientStateBuffer[slot].MoonPosition;
-        Vector2 input = state.StateInput;
+        // Vector2 input = state.StateInput;
 
         if(position_err.sqrMagnitude > ERROR_THRESHOLD || moon_position_err.sqrMagnitude > ERROR_THRESHOLD )
+        // if(position_err.sqrMagnitude > ERROR_THRESHOLD)
         {
             // rewind a replay
             Rig.position = state.RigPosition;
@@ -161,10 +177,10 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             Rig.velocity = state.RigVelocity;
             Rig.angularVelocity = state.RigAngularVelocity;
 
-            // MoonRig.position = state.MoonPosition;
-            // MoonRig.rotation = state.MoonRotation;
-            // MoonRig.velocity = state.MoonVelocity;
-            // MoonRig.angularVelocity = state.MoonAngularVelocity;
+            MoonRig.position = state.MoonPosition;
+            MoonRig.rotation = state.MoonRotation;
+            MoonRig.velocity = state.MoonVelocity;
+            MoonRig.angularVelocity = state.MoonAngularVelocity;
             // _moon.
 
             int rewind_tick_number = state.TickNumber;
@@ -173,13 +189,14 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 // float ratio = (rewind_tick_number - state.TickNumber) / (_tickNumber - state.TickNumber);
                 // ratio = Mathf.Clamp01(ratio);
                 int rw_slot = rewind_tick_number % 1024;
-                _clientInputBuffer[rw_slot] = input;
+                _clientInputBuffer[rw_slot] = state.StateInput;
+                // _clientInputBuffer[rw_slot] = input;
                 _clientStateBuffer[rw_slot].Position = Rig.position;
                 _clientStateBuffer[rw_slot].Rotation = Rig.rotation;
-                // _clientStateBuffer[rw_slot].MoonPosition = MoonRig.position;
-                // _clientStateBuffer[rw_slot].MoonRotation = MoonRig.rotation;
+                _clientStateBuffer[rw_slot].MoonPosition = MoonRig.position;
+                _clientStateBuffer[rw_slot].MoonRotation = MoonRig.rotation;
 
-                AddForceToRigid(input);
+                AddForceToRigid(state.StateInput);
 
                 // Physics.Simulate(Time.fixedDeltaTime);
 
@@ -193,31 +210,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         _stateMsgReceived.Enqueue(evnt);
     }
 
-    public override void SimulateOwner()
-    {
-//         switch(_input)
-//         {
-//             case InputSource.Keyboard:
-//                 _currentForce.x = Input.GetAxis("Horizontal");
-//                 _currentForce.y = Input.GetAxis("Vertical");
-//                 break;
-// /*             case InputSource.Mouse:
-//                 _currentForce.x = Input.GetAxis("Mouse X");
-//                 _currentForce.y = Input.GetAxis("Mouse Y");
-//                 break; */
-//         }
-
-//         state.CurrentForce = _currentForce;
-
-//         BallRigid br = state.BallRig;
-//         if(br!=null)
-//         {
-//             br.RigVelocity = _rig.velocity;
-//             br.Drag = _rig.drag;
-//             br.AngularDrag = _rig.angularDrag;
-//             br.AngulalrVelocity = _rig.angularVelocity;
-//         }
-    }
 
     // private void Update() {
     //     if(Application.isEditor)
