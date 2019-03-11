@@ -25,14 +25,16 @@ public class HelloBoltMenu : Bolt.GlobalEventListener
 		if (GUILayout.Button("Start Server", GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true)))
 		{
 			// START SERVER
-			BoltLauncher.StartServer(_endpoint);
+			// BoltLauncher.StartServer(_endpoint);
+			BoltLauncher.StartServer();
 		}
 
 		if (GUILayout.Button("Start Client", GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true)))
 		{
 			// START CLIENT
 			// BoltLauncher.StartClient(UdpEndPoint.Parse("127.0.0.1"));
-			BoltLauncher.StartClient(_endpoint_client);
+			BoltLauncher.StartClient();
+			// BoltLauncher.StartClient(_endpoint_client);
 		}
 
 		GUILayout.EndArea();
@@ -48,15 +50,15 @@ public class HelloBoltMenu : Bolt.GlobalEventListener
 			BoltNetwork.LoadScene("rolling");
 			// BoltNetwork.LoadScene("helloBolt");
 		}
-		else if(BoltNetwork.isClient)
+/* 		else if(BoltNetwork.isClient)
 		{
 			BoltNetwork.Connect((ushort)BoltRuntimeSettings.instance.debugStartPort);
-		}
+		} */
 	}
 
 	public override void SessionListUpdated(Map<Guid, UdpSession> sessionList)
 	{
-/* 		Debug.LogFormat("Session list updated: {0} total sessions", sessionList.Count);
+		Debug.LogFormat("Session list updated: {0} total sessions", sessionList.Count);
 
 		foreach (var session in sessionList)
 		{
@@ -66,6 +68,6 @@ public class HelloBoltMenu : Bolt.GlobalEventListener
 			{
 				BoltNetwork.Connect(photonSession);
 			}
-		} */
+		}
 	}
 }

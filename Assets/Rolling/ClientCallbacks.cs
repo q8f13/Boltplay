@@ -105,7 +105,7 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 	}
 
 	private void FixedUpdate() {
-		Physics.Simulate(Time.fixedDeltaTime);
+		// Physics.Simulate(Time.fixedDeltaTime);
 		// Physics.SyncTransforms();
 	}
 }

@@ -154,10 +154,10 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             if(withSimulate)
             {
                 AddForceToRigid(input);
+                Physics.Simulate(Time.fixedDeltaTime);
             }
 
             // if(withSimulate)
-            //     Physics.Simulate(Time.fixedDeltaTime);
             ++_tickNumber;
         }
     }
