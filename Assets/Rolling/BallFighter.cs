@@ -5,8 +5,8 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody)), BoltGlobalBehaviour]
 public class BallFighter : Bolt.EntityEventListener<IBallState>
 {
-    public const float ERROR_THRESHOLD = 0.0f;
-    // public const float ERROR_THRESHOLD = 0.00001f;
+    // public const float ERROR_THRESHOLD = 0.0f;
+    public const float ERROR_THRESHOLD = 0.00001f;
 
     public GameObject MoonPrefab;
 
