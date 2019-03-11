@@ -5,7 +5,8 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody)), BoltGlobalBehaviour]
 public class BallFighter : Bolt.EntityEventListener<IBallState>
 {
-    public const float ERROR_THRESHOLD = 0.00001f;
+    public const float ERROR_THRESHOLD = 0.0f;
+    // public const float ERROR_THRESHOLD = 0.00001f;
 
     public GameObject MoonPrefab;
 
@@ -48,7 +49,11 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     private Vector2[] _clientInputBuffer = new Vector2[1024];
     private ClientState[] _clientStateBuffer = new ClientState[1024];
 
+    private int _rewindTickCount = 0;
+    public int RewindTickCount{get{return _rewindTickCount;}}
+
     private Queue<StateMsg> _stateMsgReceived = new Queue<StateMsg>();
+    public int StateMsgReceivedCount{get{return _stateMsgReceived.Count;}}
     #endregion
 
     private void Awake() {
@@ -107,8 +112,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
         state.AddCallback("MoonTransform", ()=>
         {
-            _moon.transform.position = state.BallTransform.Position;
-            _moon.transform.rotation = state.BallTransform.Rotation;
+            _moon.transform.position = state.MoonTransform.Position;
+            _moon.transform.rotation = state.MoonTransform.Rotation;
             _moon.transform.localScale = Vector3.one * 0.5f;
         });
 
@@ -124,6 +129,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         while(_timer >= Time.fixedDeltaTime)
         {
             Vector2 input = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+
             _timer -= Time.fixedDeltaTime;
 
             InputSender evt = InputSender.Create(Bolt.GlobalTargets.OnlyServer);
@@ -149,6 +155,12 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             //     Physics.Simulate(Time.fixedDeltaTime);
             ++_tickNumber;
         }
+    }
+
+    public void SelfDestroy()
+    {
+        Destroy(_moon.gameObject);
+        Destroy(this.gameObject);
     }
 
     public string GetEntityId()
@@ -181,7 +193,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         // Vector2 input = state.StateInput;
 
         if(position_err.sqrMagnitude > ERROR_THRESHOLD || moon_position_err.sqrMagnitude > ERROR_THRESHOLD )
-        // if(position_err.sqrMagnitude > ERROR_THRESHOLD)
         {
             // rewind a replay
             Rig.position = state.RigPosition;
@@ -194,6 +205,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             MoonRig.velocity = state.MoonVelocity;
             MoonRig.angularVelocity = state.MoonAngularVelocity;
             // _moon.
+            _rewindTickCount++;
 
             int rewind_tick_number = state.TickNumber;
             while(rewind_tick_number < _tickNumber)

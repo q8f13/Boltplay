@@ -11,6 +11,8 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 	// private Dictionary<string, StateMsg[]> _stateReceived = new Dictionary<string, StateMsg[]>();
 
+	private Dictionary<string, int> _stateMsgCount = new Dictionary<string, int>();
+
 	private string _thisClientId;
 
 	public override void OnEvent(StateMsg evnt)
@@ -22,8 +24,17 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 		// Debug.Assert(string.IsNullOrEmpty(evnt.EntityId) == false, "entity id should not be empty");
 
-		if(_players.ContainsKey(evnt.EntityId))
-			_players[evnt.EntityId].ReceiveState(evnt);
+		if(!_stateMsgCount.ContainsKey(evnt.EntityId))
+			_stateMsgCount.Add(evnt.EntityId, 0);
+		_stateMsgCount[evnt.EntityId]++;
+
+		if(!_players.ContainsKey(evnt.EntityId))
+		{
+			Debug.LogWarningFormat("entity id {0} not attached, ignored", evnt.EntityId);
+			return;
+		}
+
+		_players[evnt.EntityId].ReceiveState(evnt);
 
 /* 		if(!_stateReceived.ContainsKey(evnt.EntityId))
 			_stateReceived.Add(evnt.EntityId, new StateMsg[1024]);
@@ -52,7 +63,10 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 	public override void EntityDetached(BoltEntity entity)
 	{
-		_players.Remove(entity.networkId.PackedValue.ToString());
+		string id = entity.networkId.PackedValue.ToString();
+		_players[id].SelfDestroy();
+		_players.Remove(id);
+
 		Debug.LogWarning(string.Format("entity {0} detached", entity.networkId.PackedValue));
 	}
 
@@ -63,10 +77,15 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 	}
 
 	private void OnGUI() {
-		GUILayout.BeginHorizontal();
+		GUILayout.BeginVertical();
 		foreach(string id in _players.Keys)
-			GUILayout.Label(id);
-		GUILayout.EndHorizontal();
+		{
+			// int count = 0;
+			// if(_stateMsgCount.ContainsKey(id))
+			// 	count = _stateMsgCount[id];
+			GUILayout.Label(string.Format("{0} received count {1}",id, _players[id].RewindTickCount));
+		}
+		GUILayout.EndVertical();
 	}
 
 	private void Update() 

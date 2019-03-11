@@ -61,7 +61,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 	private void Update() {
 		// send input from server player
 		if(_serverPlayer != null)
-			_serverPlayer.GetBody.LocalSimulateTick(false);
+			_serverPlayer.GetBody.LocalSimulateTick(true);
 
 		// collect player inputs and simulate them with same step
         while(!PlayerInputEmpty())
@@ -70,7 +70,10 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 			foreach(string id in _playerInputs.Keys)
 			{
 				if(_playerInputs[id].Count == 0)
+				{
+					_playerInputRelay[id] = null;
 					continue;
+				}
 
 				InputSender evt = _playerInputs[id].Dequeue();
 
@@ -89,6 +92,8 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 			foreach(string id in _playerInputRelay.Keys)
 			{
 				InputSender evt = _playerInputRelay[id];
+				if(evt == null)
+					continue;
 				Rigidbody playerRig = _players[id];
 
 				// create simulate result and reply to client
