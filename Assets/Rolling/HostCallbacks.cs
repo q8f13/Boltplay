@@ -9,7 +9,8 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 	private Dictionary<string, Queue<InputSender>> _playerInputs = new Dictionary<string, Queue<InputSender>>();
 
-	private Dictionary<string, InputSender> _playerInputRelay = new Dictionary<string, InputSender>();	
+	private Queue<InputSender> _playerInputRelay = new Queue<InputSender>();
+	// private Dictionary<string, InputSender> _playerInputRelay = new Dictionary<string, InputSender>();	
 
 	private PlayPlayerObject _serverPlayer;
 
@@ -44,7 +45,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 		string entity_id = player.GetBody.GetEntityId();
 		_players.Remove(entity_id);
 		_playerInputs.Remove(entity_id);
-		_playerInputRelay.Remove(entity_id);
+		// _playerInputRelay.Remove(entity_id);
 
 		player.SelfDestroy();
 	}
@@ -87,7 +88,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 			{
 				if(_playerInputs[id].Count == 0)
 				{
-					_playerInputRelay[id] = null;
+					// _playerInputRelay[id] = null;
 					continue;
 				}
 
@@ -96,16 +97,46 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 				Rigidbody playerRig = _players[evt.EntityId];
 				AddForceToRigid(playerRig, evt.InputParam);
 
-				if(_playerInputRelay.ContainsKey(id))
+/* 				if(_playerInputRelay.ContainsKey(id))
 					_playerInputRelay[id] = evt;
 				else
-					_playerInputRelay.Add(id, evt);
+					_playerInputRelay.Add(id, evt); */
+				
+				_playerInputRelay.Enqueue(evt);
 			}
 
 			Physics.Simulate(Time.fixedDeltaTime);
 			Physics.SyncTransforms();
 
-			foreach(string id in _playerInputRelay.Keys)
+			while(_playerInputRelay.Count > 0)
+			{
+				InputSender evt = _playerInputRelay.Dequeue();
+				if(evt == null)
+					continue;
+
+				Rigidbody playerRig = _players[evt.EntityId];
+
+				// create simulate result and reply to client
+				// for client prediction error correcting
+				StateMsg state = StateMsg.Create(Bolt.GlobalTargets.AllClients);
+				// ball
+				state.RigPosition = playerRig.position;
+				state.RigRotation = playerRig.rotation;
+				state.RigVelocity = playerRig.velocity;
+				state.RigAngularVelocity = playerRig.angularVelocity;
+				state.EntityId = evt.EntityId;
+				state.TickNumber = evt.TickNumber + 1;
+				state.StateInput = evt.InputParam;
+				// moon
+				BallFighter bf = playerRig.GetComponent<BallFighter>();
+				state.MoonPosition = bf.MoonRig.position;
+				state.MoonRotation = bf.MoonRig.rotation;
+				state.MoonVelocity = bf.MoonRig.velocity;
+				state.MoonAngularVelocity = bf.MoonRig.angularVelocity;
+				state.Send();
+			}
+
+/* 			foreach(string id in _playerInputRelay.Keys)
 			{
 				InputSender evt = _playerInputRelay[id];
 				if(evt == null)
@@ -130,7 +161,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 				state.MoonVelocity = bf.MoonRig.velocity;
 				state.MoonAngularVelocity = bf.MoonRig.angularVelocity;
 				state.Send();
-			}
+			} */
         }
 
 /*         foreach(Rigidbody rig in _players.Values)

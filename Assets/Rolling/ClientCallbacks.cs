@@ -102,11 +102,17 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 		// {
 		// 	if(bf.)
 		// }
+
+		foreach (BallFighter bf in _players.Values)
+		{
+			bool with_control = bf.GetEntityId() == _thisClientId;
+			bf.UpdateAndCheckRewindTickCatched(with_control);
+		}
 	}
 
 	private void FixedUpdate() {
-		Physics.Simulate(Time.fixedDeltaTime);
-		Physics.SyncTransforms();
+		// Physics.Simulate(Time.fixedDeltaTime);
+		// Physics.SyncTransforms();
 	}
 }
 

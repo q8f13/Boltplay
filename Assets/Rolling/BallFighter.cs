@@ -180,7 +180,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             _clientStateBuffer[slot].MoonPosition = MoonRig.position;
             _clientStateBuffer[slot].MoonRotation = MoonRig.rotation;
 
-
             if(withSimulate)
             {
                 AddForceToRigid(input);
@@ -198,38 +197,33 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         return entity.networkId.PackedValue.ToString();
     }
 
-	private void FixedUpdate()
-	{
-		UpdateAndCheckRewindTickCatched();
-	}
-
-    void UpdateAndCheckRewindTickCatched()
+    public void UpdateAndCheckRewindTickCatched(bool withSimulate)
     {
         // StateMsg state = _stateMsgReceived.Dequeue();
         while(_stateMsgReceived.Count > 0)
         {
             StateSnapshot state = _stateMsgReceived.Dequeue();
-            if(state.EntityId == null)
+/*             if(state.EntityId == null)
             {
                 Debug.LogError("dequeue: invalid entity id");
                 continue;
-            }
-            RewindTick(state);
+            } */
+            RewindTick(state, withSimulate);
         }
 
         // if correction smoothing
         _clientPosError *= 0.9f;
         _clientRotError = Quaternion.Slerp(this._clientRotError, Quaternion.identity, 0.1f);
         // else just snap
-        _clientPosError = Vector3.zero;
-        _clientRotError = Quaternion.identity;
+        // _clientPosError = Vector3.zero;
+        // _clientRotError = Quaternion.identity;
 
         // Rig.position = 
         // transform.position = Rig.position + _clientPosError;
         // transform.rotation = Rig.rotation * _clientRotError;
     }
 
-    void RewindTick(StateSnapshot state)
+    void RewindTick(StateSnapshot state, bool withSimulate)
     {
         // StateMsg state = stateMsgQ.Dequeue();
 
@@ -254,6 +248,13 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             MoonRig.rotation = state.MoonRotation;
             MoonRig.velocity = state.MoonVelocity;
             MoonRig.angularVelocity = state.MoonAngularVelocity;
+
+            // transform.position = state.Position;
+            // transform.rotation = state.Rotation;
+
+            // MoonRig.transform.position = state.MoonPosition;
+            // MoonRig.transform.rotation = state.MoonRotation;
+
             // _moon.
             _rewindTickCount++;
 
@@ -264,7 +265,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 // ratio = Mathf.Clamp01(ratio);
                 int rw_slot = rewind_tick_number % 1024;
                 _clientInputBuffer[rw_slot] = state.StateInput;
-                // _clientInputBuffer[rw_slot] = input;
+                // _clientInputBuffer[rw_slot] = _currentInput;
                 _clientStateBuffer[rw_slot].Position = Rig.position;
                 _clientStateBuffer[rw_slot].Rotation = Rig.rotation;
                 _clientStateBuffer[rw_slot].MoonPosition = MoonRig.position;
@@ -274,6 +275,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
                 // AddForceToRigid(_currentInput);
                 AddForceToRigid(state.StateInput);
+                if(withSimulate)
+                    Physics.Simulate(Time.fixedDeltaTime);
 
                 ++rewind_tick_number;
             }
