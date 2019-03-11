@@ -61,12 +61,18 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 		_players.Add(id, bf);
 	}
 
-	public override void EntityDetached(BoltEntity entity)
+	void DetachPlayer(BoltEntity entity)
 	{
 		string id = entity.networkId.PackedValue.ToString();
-		_players[id].SelfDestroy();
+		// _players[id].SelfDestroy();
 		_players.Remove(id);
 
+		Debug.LogWarning(string.Format("entity {0} disconnected", id));
+	}
+
+	public override void EntityDetached(BoltEntity entity)
+	{
+		DetachPlayer(entity);
 		Debug.LogWarning(string.Format("entity {0} detached", entity.networkId.PackedValue));
 	}
 
@@ -100,7 +106,7 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 	private void FixedUpdate() {
 		Physics.Simulate(Time.fixedDeltaTime);
-		Physics.SyncTransforms();
+		// Physics.SyncTransforms();
 	}
 }
 

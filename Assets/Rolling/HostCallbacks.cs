@@ -9,7 +9,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 	private Dictionary<string, Queue<InputSender>> _playerInputs = new Dictionary<string, Queue<InputSender>>();
 
-	private Dictionary<string, InputSender> _playerInputRelay = new Dictionary<string, InputSender>();
+	private Dictionary<string, InputSender> _playerInputRelay = new Dictionary<string, InputSender>();	
 
 	private PlayPlayerObject _serverPlayer;
 
@@ -38,6 +38,17 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 		PlayerRegistry.CreatePlayerOnClient(connection);
 	}
 
+	public override void Disconnected(BoltConnection connection)
+	{
+		PlayPlayerObject player = PlayerRegistry.GetPlayer(connection);
+		string entity_id = player.GetBody.GetEntityId();
+		_players.Remove(entity_id);
+		_playerInputs.Remove(entity_id);
+		_playerInputRelay.Remove(entity_id);
+
+		player.SelfDestroy();
+	}
+
 	#region Events
 	public override void OnEvent(InputSender evnt)
 	{
@@ -61,7 +72,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 	private void Update() {
 		// send input from server player
 		if(_serverPlayer != null)
-			_serverPlayer.GetBody.LocalSimulateTick(true);
+			_serverPlayer.GetBody.LocalSimulateTick(false);
 
 		// collect player inputs and simulate them with same step
         while(!PlayerInputEmpty())

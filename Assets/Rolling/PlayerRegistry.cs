@@ -69,6 +69,14 @@ public class PlayPlayerObject
 		get{return Conn != null;}
 	}
 
+	public void SelfDestroy()
+	{
+		// BoltNetwork.Detach(_body.MoonRig.gameObject);
+		// BoltNetwork.Detach(Char.gameObject);
+		BoltNetwork.Destroy(_body.MoonRig.gameObject);
+		BoltNetwork.Destroy(Char.gameObject);
+	}
+
 	public PlayPlayerObject Spawn()
 	{
 		Vector3 spawn_pos = new Vector3(Random.Range(-4,4), 2, Random.Range(-4,4));

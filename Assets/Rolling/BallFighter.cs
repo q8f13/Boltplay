@@ -120,6 +120,11 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         _attached = true;
     }
 
+    public override void Detached()
+    {
+        _attached = false;
+    }
+
     public void LocalSimulateTick(bool withSimulate)
     {
         if(!_attached)
@@ -155,12 +160,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             //     Physics.Simulate(Time.fixedDeltaTime);
             ++_tickNumber;
         }
-    }
-
-    public void SelfDestroy()
-    {
-        Destroy(_moon.gameObject);
-        Destroy(this.gameObject);
     }
 
     public string GetEntityId()
