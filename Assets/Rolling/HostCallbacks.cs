@@ -53,6 +53,11 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 	public override void OnEvent(InputSender evnt)
 	{
         string id = evnt.EntityId;
+		if(string.IsNullOrEmpty(id))
+		{
+			Debug.LogError("entity id should not be empty");
+			return;
+		}
 		if(!_playerInputs.ContainsKey(id))
 			_playerInputs.Add(id, new Queue<InputSender>());
         _playerInputs[id].Enqueue(evnt);

@@ -52,11 +52,24 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     private int _rewindTickCount = 0;
     public int RewindTickCount{get{return _rewindTickCount;}}
 
-    private Queue<StateMsg> _stateMsgReceived = new Queue<StateMsg>();
+    private Queue<StateSnapshot> _stateMsgReceived = new Queue<StateSnapshot>();
     public int StateMsgReceivedCount{get{return _stateMsgReceived.Count;}}
+
+    private Vector3 _clientPosError;
+    private Quaternion _clientRotError;
+
     #endregion
 
-    private void Awake() {
+    private bool _beSelf = false;
+
+    public override void ControlGained()
+    {
+        _beSelf = true;
+    }
+
+    public override void ControlLost()
+    {
+        _beSelf = false;
     }
 
     public override void Attached()
@@ -77,8 +90,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         _moon.enablePreprocessing = true;
 
         // set color
-        state.SetTransforms(state.BallTransform, transform);
-        state.SetTransforms(state.MoonTransform, _moon.transform);
+        // state.SetTransforms(state.BallTransform, transform);
+        // state.SetTransforms(state.MoonTransform, _moon.transform);
 
         if(entity.isOwner)
         {
@@ -104,20 +117,36 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             transform.rotation = state.balltransform.rotation;
         }); */ 
 
-        state.AddCallback("BallTransform", ()=>
-        {
-            transform.position = state.BallTransform.Position;
-            transform.rotation = state.BallTransform.Rotation;
-        });
+        // state.AddCallback("BallTransform", ()=>
+        // {
+        //     transform.position = state.BallTransform.Position;
+        //     transform.rotation = state.BallTransform.Rotation;
+        // });
 
-        state.AddCallback("MoonTransform", ()=>
-        {
-            _moon.transform.position = state.MoonTransform.Position;
-            _moon.transform.rotation = state.MoonTransform.Rotation;
-            _moon.transform.localScale = Vector3.one * 0.5f;
-        });
+        // state.AddCallback("MoonTransform", ()=>
+        // {
+        //     _moon.transform.position = state.MoonTransform.Position;
+        //     _moon.transform.rotation = state.MoonTransform.Rotation;
+        //     _moon.transform.localScale = Vector3.one * 0.5f;
+        // });
 
         _attached = true;
+    }
+
+    public void UpdateWhenCreated(PlayerCreated evt)
+    {
+        transform.position = evt.Position;
+        transform.rotation = evt.Rotation;
+        MoonRig.transform.position = evt.MoonPosition;
+        MoonRig.transform.rotation = evt.MoonRotation;
+        MoonRig.position = evt.MoonPosition;
+        MoonRig.rotation = evt.MoonRotation;
+
+        // _clientInputBuffer[0] = Vector3.zero;
+        // _clientStateBuffer[0].Position = evt.Position;
+        // _clientStateBuffer[0].Rotation = evt.Rotation;
+        // _clientStateBuffer[0].MoonPosition = evt.MoonPosition;
+        // _clientStateBuffer[0].MoonRotation = evt.MoonRotation;
     }
 
     public override void Detached()
@@ -144,18 +173,20 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             evt.Send();
 
             int slot = _tickNumber % 1024;
-            Debug.Assert(slot >= 0);
+            // Debug.Assert(slot >= 0);
             _clientInputBuffer[slot] = input;
             _clientStateBuffer[slot].Position = Rig.position;
             _clientStateBuffer[slot].Rotation = Rig.rotation;
             _clientStateBuffer[slot].MoonPosition = MoonRig.position;
             _clientStateBuffer[slot].MoonRotation = MoonRig.rotation;
 
+
             if(withSimulate)
             {
                 AddForceToRigid(input);
-                Physics.Simulate(Time.fixedDeltaTime);
             }
+
+            _currentInput = input;
 
             // if(withSimulate)
             ++_tickNumber;
@@ -167,37 +198,57 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         return entity.networkId.PackedValue.ToString();
     }
 
-    private void FixedUpdate() 
-    {
-        UpdateAndCheckRewindTickCatched();
-    }
+	private void FixedUpdate()
+	{
+		UpdateAndCheckRewindTickCatched();
+	}
 
     void UpdateAndCheckRewindTickCatched()
     {
         // StateMsg state = _stateMsgReceived.Dequeue();
         while(_stateMsgReceived.Count > 0)
         {
-            StateMsg state = _stateMsgReceived.Dequeue();
+            StateSnapshot state = _stateMsgReceived.Dequeue();
+            if(state.EntityId == null)
+            {
+                Debug.LogError("dequeue: invalid entity id");
+                continue;
+            }
             RewindTick(state);
         }
+
+        // if correction smoothing
+        _clientPosError *= 0.9f;
+        _clientRotError = Quaternion.Slerp(this._clientRotError, Quaternion.identity, 0.1f);
+        // else just snap
+        _clientPosError = Vector3.zero;
+        _clientRotError = Quaternion.identity;
+
+        // Rig.position = 
+        // transform.position = Rig.position + _clientPosError;
+        // transform.rotation = Rig.rotation * _clientRotError;
     }
 
-    void RewindTick(StateMsg state)
+    void RewindTick(StateSnapshot state)
     {
         // StateMsg state = stateMsgQ.Dequeue();
 
         int slot = state.TickNumber % 1024;
-        Vector3 position_err = state.RigPosition - this._clientStateBuffer[slot].Position;
+        Vector3 position_err = state.Position - this._clientStateBuffer[slot].Position;
         Vector3 moon_position_err = state.MoonPosition - this._clientStateBuffer[slot].MoonPosition;
         // Vector2 input = state.StateInput;
 
         if(position_err.sqrMagnitude > ERROR_THRESHOLD || moon_position_err.sqrMagnitude > ERROR_THRESHOLD )
         {
+            // capture the current predicted pos for smoothing
+            Vector3 prev_pos = Rig.position + this._clientPosError;
+            Quaternion prev_rot = Rig.rotation * this._clientRotError;
+
             // rewind a replay
-            Rig.position = state.RigPosition;
-            Rig.rotation = state.RigRotation;
-            Rig.velocity = state.RigVelocity;
-            Rig.angularVelocity = state.RigAngularVelocity;
+            Rig.position = state.Position;
+            Rig.rotation = state.Rotation;
+            Rig.velocity = state.Velocity;
+            Rig.angularVelocity = state.AngularVelocity;
 
             MoonRig.position = state.MoonPosition;
             MoonRig.rotation = state.MoonRotation;
@@ -219,15 +270,35 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 _clientStateBuffer[rw_slot].MoonPosition = MoonRig.position;
                 _clientStateBuffer[rw_slot].MoonRotation = MoonRig.rotation;
 
+                Debug.LogFormat("save input buffer: id {0}, tick {1}, position {2}", this.GetEntityId(), rewind_tick_number, Rig.position);
+
+                // AddForceToRigid(_currentInput);
                 AddForceToRigid(state.StateInput);
 
                 ++rewind_tick_number;
             }
+
+            // if more than 2ms apart, just snap
+            if((prev_pos - Rig.position).sqrMagnitude >= 4.0f)
+            {
+                _clientPosError = Vector3.zero;
+                _clientRotError = Quaternion.identity;
+            }
+            else
+            {
+                _clientPosError = prev_pos - Rig.position;
+                _clientRotError = Quaternion.Inverse(Rig.rotation) * prev_rot;
+            }
         }
     }
 
-    public void ReceiveState(StateMsg evnt)
+    public void ReceiveState(StateSnapshot evnt)
     {
+        if(evnt.EntityId == null)
+        {
+            Debug.LogError("enqueue: invalid entity id");
+            return;
+        }
         _stateMsgReceived.Enqueue(evnt);
     }
 

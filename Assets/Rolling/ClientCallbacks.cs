@@ -6,7 +6,6 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
     private Dictionary<string, BallFighter> _players = new Dictionary<string, BallFighter>();
     // private Dictionary<string, Queue<StateMsg>> _stateMsgReceived = new Dictionary<string, Queue<StateMsg>>();
 
-	private Dictionary<string, StateSnapshot> _stateMsgRelay = new Dictionary<string, StateSnapshot>();
     // private Queue<StateMsg> _stateMsgReceived = new Queue<StateMsg>();
 
 	// private Dictionary<string, StateMsg[]> _stateReceived = new Dictionary<string, StateMsg[]>();
@@ -15,6 +14,11 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 	private string _thisClientId;
 
+	public override void OnEvent(PlayerCreated evnt)
+	{
+		_players[evnt.EntityId].UpdateWhenCreated(evnt);
+	}
+
 	public override void OnEvent(StateMsg evnt)
 	{
 		// if(!_stateMsgReceived.ContainsKey(evnt.EntityId))
@@ -22,19 +26,15 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
         // _stateMsgReceived[evnt.EntityId].Enqueue(evnt);
 
-		// Debug.Assert(string.IsNullOrEmpty(evnt.EntityId) == false, "entity id should not be empty");
+		StateSnapshot snapshot = new StateSnapshot(evnt);
 
-		if(!_stateMsgCount.ContainsKey(evnt.EntityId))
-			_stateMsgCount.Add(evnt.EntityId, 0);
-		_stateMsgCount[evnt.EntityId]++;
-
-		if(!_players.ContainsKey(evnt.EntityId))
+		if(!_players.ContainsKey(snapshot.EntityId))
 		{
 			Debug.LogWarningFormat("entity id {0} not attached, ignored", evnt.EntityId);
 			return;
 		}
 
-		_players[evnt.EntityId].ReceiveState(evnt);
+		_players[evnt.EntityId].ReceiveState(snapshot);
 
 /* 		if(!_stateReceived.ContainsKey(evnt.EntityId))
 			_stateReceived.Add(evnt.EntityId, new StateMsg[1024]);
@@ -105,21 +105,39 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 	}
 
 	private void FixedUpdate() {
-		// Physics.Simulate(Time.fixedDeltaTime);
-		// Physics.SyncTransforms();
+		Physics.Simulate(Time.fixedDeltaTime);
+		Physics.SyncTransforms();
 	}
 }
 
 public class StateSnapshot
 {
-	public BallFighter Body;
-	public StateMsg TheState;
+	// public BallFighter Body;
+	// public StateMsg TheState;
 	public int TickNumber;
+	public string EntityId;
+	public Vector3 Position;
+	public Quaternion Rotation;
+	public Vector3 Velocity;
+	public Vector3 AngularVelocity;
+	public Vector3 MoonPosition;
+	public Quaternion MoonRotation;
+	public Vector3 MoonVelocity;
+	public Vector3 MoonAngularVelocity;
+	public Vector2 StateInput;
 
-	public StateSnapshot(BallFighter body, StateMsg state, int tick_number_start)
+	public StateSnapshot(StateMsg state)
 	{
-		Body = body;
-		TheState = state;
-		TickNumber = tick_number_start;
+		TickNumber = state.TickNumber;
+		EntityId = state.EntityId;
+		StateInput = state.StateInput;
+		Position = state.RigPosition;
+		Rotation = state.RigRotation;
+		Velocity = state.RigVelocity;
+		AngularVelocity = state.RigAngularVelocity;
+		MoonPosition = state.MoonPosition;
+		MoonRotation = state.MoonRotation;
+		MoonVelocity = state.MoonVelocity;
+		MoonAngularVelocity = state.MoonAngularVelocity;
 	}
 }

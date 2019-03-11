@@ -79,7 +79,7 @@ public class PlayPlayerObject
 
 	public PlayPlayerObject Spawn()
 	{
-		Vector3 spawn_pos = new Vector3(Random.Range(-4,4), 2, Random.Range(-4,4));
+		Vector3 spawn_pos = new Vector3(Random.Range(-4,4), 4, Random.Range(-4,4));
 		if(!Char)
 		{
 			Char = BoltNetwork.Instantiate(BoltPrefabs.ballFighter, Vector3.zero, Quaternion.identity);
@@ -94,6 +94,14 @@ public class PlayPlayerObject
 		}
 
 		Char.transform.position = spawn_pos;
+
+		PlayerCreated create_evt = PlayerCreated.Create(Bolt.GlobalTargets.AllClients);
+		create_evt.Position = spawn_pos;
+		create_evt.Rotation = Quaternion.identity;
+		create_evt.MoonPosition = spawn_pos + Vector3.right * 0.5f;
+		create_evt.MoonRotation = Quaternion.identity;
+		create_evt.EntityId = Char.networkId.PackedValue.ToString();
+		create_evt.Send();
 		// _body.MoonRig.transform.position = spawn_pos + Vector3.right * 0.5f;
 
 		return this;
