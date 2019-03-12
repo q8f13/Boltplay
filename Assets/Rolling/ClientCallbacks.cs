@@ -14,7 +14,7 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 	private string _thisClientId;
 
-	private Dictionary<string, Queue<StateSnapshot>> _stateReceived = new Dictionary<string, Queue<StateSnapshot>>();
+	// private Dictionary<string, Queue<StateSnapshot>> _stateReceived = new Dictionary<string, Queue<StateSnapshot>>();
 
 	public override void OnEvent(PlayerCreated evnt)
 	{
@@ -36,10 +36,14 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 			return;
 		}
 
-		// _players[evnt.EntityId].ReceiveState(snapshot);
-		if(!_stateReceived.ContainsKey(evnt.EntityId))
-			_stateReceived.Add(evnt.EntityId, new Queue<StateSnapshot>());
-		_stateReceived[evnt.EntityId].Enqueue(snapshot);
+		// if(!_stateMsgCount.ContainsKey(snapshot.EntityId))
+		// 	_stateMsgCount.Add(snapshot.EntityId, 0);
+		// _stateMsgCount[snapshot.EntityId]++;
+
+		_players[evnt.EntityId].ReceiveState(snapshot);
+		// if(!_stateReceived.ContainsKey(evnt.EntityId))
+		// 	_stateReceived.Add(evnt.EntityId, new Queue<StateSnapshot>());
+		// _stateReceived[evnt.EntityId].Enqueue(snapshot);
 
 /* 		if(!_stateReceived.ContainsKey(evnt.EntityId))
 			_stateReceived.Add(evnt.EntityId, new StateMsg[1024]);
@@ -99,17 +103,6 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 		GUILayout.EndVertical();
 	}
 
-	bool MsgQueueEmpty()
-	{
-		foreach(Queue<StateSnapshot> states in _stateReceived.Values)
-		{
-			if(states.Count > 0)
-				return false;
-		}
-
-		return true;
-	}
-
 	private void Update() 
 	{
 		if(string.IsNullOrEmpty(_thisClientId))
@@ -126,7 +119,7 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 			bf.ToggleRigidbody(with_control);
 		} */
 
-		while(!MsgQueueEmpty())
+/* 		while(!MsgQueueEmpty())
 		{
 			foreach(string id in _stateReceived.Keys)
 			{
@@ -135,7 +128,7 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 				StateSnapshot state = _stateReceived[id].Dequeue();
 				_players[id].RewindTick(state);
 			}
-		}
+		} */
 
 /* 		foreach(BallFighter bf in _players.Values)
 		{

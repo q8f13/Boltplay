@@ -52,7 +52,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     private int _rewindTickCount = 0;
     public int RewindTickCount{get{return _rewindTickCount;}}
 
-    private Queue<StateSnapshot> _stateMsgReceived = new Queue<StateSnapshot>();
+    private Stack<StateSnapshot> _stateMsgReceived = new Stack<StateSnapshot>();
     public int StateMsgReceivedCount{get{return _stateMsgReceived.Count;}}
 
     private Vector3 _clientPosError;
@@ -204,19 +204,19 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         MoonRig.isKinematic = !on;
     }
 
-    public void UpdateAndCheckRewindTickCatched(bool withSimulate)
+    private void FixedUpdate() {
+        UpdateAndCheckRewindTickCatched(true);
+    }
+
+    void UpdateAndCheckRewindTickCatched(bool withSimulate)
     {
-        // StateMsg state = _stateMsgReceived.Dequeue();
-        while(_stateMsgReceived.Count > 0)
-        {
-            StateSnapshot state = _stateMsgReceived.Dequeue();
-/*             if(state.EntityId == null)
-            {
-                Debug.LogError("dequeue: invalid entity id");
-                continue;
-            } */
-            RewindTick(state);
-        }
+        if(_stateMsgReceived.Count == 0)
+            return;
+
+        StateSnapshot state = _stateMsgReceived.Pop();
+        RewindTick(state); 
+
+        _stateMsgReceived.Clear();
 
         // if correction smoothing
         _clientPosError *= 0.9f;
@@ -237,7 +237,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     // FIXME: 现在问题在于，对client上的所有player来说
     // 每个player在rewind阶段所需要的Physics.Simulate()次数是不一样的
     // 需要想个办法让这个次数一致
-    public void RewindTick(StateSnapshot state)
+    void RewindTick(StateSnapshot state)
     {
         // StateMsg state = stateMsgQ.Dequeue();
 
@@ -292,11 +292,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 Debug.LogFormat("save input buffer: id {0}, tick {1}, position {2}", this.GetEntityId(), rewind_tick_number, Rig.position);
 
                 // AddForceToRigid(_currentInput);
-                if(_beSelf)
-                    AddForceToRigid(_currentInput);
-                else
-                    AddForceToRigid(state.StateInput);
-
+                AddForceToRigid(state.StateInput);
                 Physics.Simulate(Time.fixedDeltaTime);
                 // Physics.SyncTransforms();
 
@@ -324,7 +320,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             Debug.LogError("enqueue: invalid entity id");
             return;
         }
-        _stateMsgReceived.Enqueue(evnt);
+        _stateMsgReceived.Push(evnt);
     }
 
 
