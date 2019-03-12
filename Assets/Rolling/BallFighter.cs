@@ -166,6 +166,9 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
             _timer -= Time.fixedDeltaTime;
 
+            // TODO: 这里需要加上检查上次state的ticknumber
+            // 将当前tick与上次ticknumber相差的input buffer都发出去
+            // 即redundant input message
             InputSender evt = InputSender.Create(Bolt.GlobalTargets.OnlyServer);
             evt.InputParam = input;
             evt.TickNumber = _tickNumber;
@@ -234,9 +237,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     // 不会抖
     // 一旦client的local player有state要同步，client remote player就会抖
 
-    // FIXME: 现在问题在于，对client上的所有player来说
-    // 每个player在rewind阶段所需要的Physics.Simulate()次数是不一样的
-    // 需要想个办法让这个次数一致
     void RewindTick(StateSnapshot state)
     {
         // StateMsg state = stateMsgQ.Dequeue();
@@ -298,6 +298,10 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
                 ++rewind_tick_number;
             }
+
+            // TODO: correction smoothing
+            // 让物理模拟与显示分离
+            // 物理负责同步，显示部分利用每次的误差来做插值
 
             // if more than 2ms apart, just snap
             if((prev_pos - Rig.position).sqrMagnitude >= 4.0f)
