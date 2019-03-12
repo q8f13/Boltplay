@@ -173,7 +173,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             evt.Send();
 
             int slot = _tickNumber % 1024;
-            // Debug.Assert(slot >= 0);
             _clientInputBuffer[slot] = input;
             _clientStateBuffer[slot].Position = Rig.position;
             _clientStateBuffer[slot].Rotation = Rig.rotation;
@@ -183,6 +182,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             if(withSimulate)
             {
                 AddForceToRigid(input);
+                Physics.Simulate(Time.fixedDeltaTime);
+                // Physics.SyncTransforms();
             }
 
             _currentInput = input;
@@ -197,6 +198,12 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         return entity.networkId.PackedValue.ToString();
     }
 
+    public void ToggleRigidbody(bool on)
+    {
+        _rig.isKinematic = !on;
+        MoonRig.isKinematic = !on;
+    }
+
     public void UpdateAndCheckRewindTickCatched(bool withSimulate)
     {
         // StateMsg state = _stateMsgReceived.Dequeue();
@@ -208,7 +215,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 Debug.LogError("dequeue: invalid entity id");
                 continue;
             } */
-            RewindTick(state, withSimulate);
+            RewindTick(state);
         }
 
         // if correction smoothing
@@ -219,11 +226,18 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         // _clientRotError = Quaternion.identity;
 
         // Rig.position = 
-        // transform.position = Rig.position + _clientPosError;
-        // transform.rotation = Rig.rotation * _clientRotError;
+        // Rig.position = _rigProxyPosition + _clientPosError;
+        // Rig.rotation = _rigProxyRotation * _clientRotError;
     }
 
-    void RewindTick(StateSnapshot state, bool withSimulate)
+    // client在local player没有输入信息要同步的时候（应该也就是不需要rewind的时候）
+    // 不会抖
+    // 一旦client的local player有state要同步，client remote player就会抖
+
+    // FIXME: 现在问题在于，对client上的所有player来说
+    // 每个player在rewind阶段所需要的Physics.Simulate()次数是不一样的
+    // 需要想个办法让这个次数一致
+    public void RewindTick(StateSnapshot state)
     {
         // StateMsg state = stateMsgQ.Dequeue();
 
@@ -249,6 +263,9 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             MoonRig.velocity = state.MoonVelocity;
             MoonRig.angularVelocity = state.MoonAngularVelocity;
 
+            Color clr = new Color(slot / 1024.0f, 0, 0);
+            Debug.DrawRay(state.Position, Vector3.up * 0.5f, clr, 0.5f);
+
             // transform.position = state.Position;
             // transform.rotation = state.Rotation;
 
@@ -257,6 +274,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
             // _moon.
             _rewindTickCount++;
+            // _currentInput = state.StateInput;
 
             int rewind_tick_number = state.TickNumber;
             while(rewind_tick_number < _tickNumber)
@@ -274,9 +292,13 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 Debug.LogFormat("save input buffer: id {0}, tick {1}, position {2}", this.GetEntityId(), rewind_tick_number, Rig.position);
 
                 // AddForceToRigid(_currentInput);
-                AddForceToRigid(state.StateInput);
-                if(withSimulate)
-                    Physics.Simulate(Time.fixedDeltaTime);
+                if(_beSelf)
+                    AddForceToRigid(_currentInput);
+                else
+                    AddForceToRigid(state.StateInput);
+
+                Physics.Simulate(Time.fixedDeltaTime);
+                // Physics.SyncTransforms();
 
                 ++rewind_tick_number;
             }

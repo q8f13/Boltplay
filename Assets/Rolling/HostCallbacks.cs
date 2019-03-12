@@ -106,7 +106,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 			}
 
 			Physics.Simulate(Time.fixedDeltaTime);
-			Physics.SyncTransforms();
+			// Physics.SyncTransforms();
 
 			while(_playerInputRelay.Count > 0)
 			{

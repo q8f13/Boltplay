@@ -14,6 +14,8 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 	private string _thisClientId;
 
+	private Dictionary<string, Queue<StateSnapshot>> _stateReceived = new Dictionary<string, Queue<StateSnapshot>>();
+
 	public override void OnEvent(PlayerCreated evnt)
 	{
 		_players[evnt.EntityId].UpdateWhenCreated(evnt);
@@ -34,7 +36,10 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 			return;
 		}
 
-		_players[evnt.EntityId].ReceiveState(snapshot);
+		// _players[evnt.EntityId].ReceiveState(snapshot);
+		if(!_stateReceived.ContainsKey(evnt.EntityId))
+			_stateReceived.Add(evnt.EntityId, new Queue<StateSnapshot>());
+		_stateReceived[evnt.EntityId].Enqueue(snapshot);
 
 /* 		if(!_stateReceived.ContainsKey(evnt.EntityId))
 			_stateReceived.Add(evnt.EntityId, new StateMsg[1024]);
@@ -94,25 +99,51 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 		GUILayout.EndVertical();
 	}
 
-	private void Update() 
+	bool MsgQueueEmpty()
 	{
-		if(!string.IsNullOrEmpty(_thisClientId))
-			_players[_thisClientId].LocalSimulateTick(true);
-		// foreach (BallFighter bf in _players.Values)
-		// {
-		// 	if(bf.)
-		// }
-
-		foreach (BallFighter bf in _players.Values)
+		foreach(Queue<StateSnapshot> states in _stateReceived.Values)
 		{
-			bool with_control = bf.GetEntityId() == _thisClientId;
-			bf.UpdateAndCheckRewindTickCatched(with_control);
+			if(states.Count > 0)
+				return false;
 		}
+
+		return true;
 	}
 
-	private void FixedUpdate() {
-		// Physics.Simulate(Time.fixedDeltaTime);
-		// Physics.SyncTransforms();
+	private void Update() 
+	{
+		if(string.IsNullOrEmpty(_thisClientId))
+			return;
+
+		// _players[_thisClientId].ToggleRigidbody(true);
+
+		_players[_thisClientId].LocalSimulateTick(true);
+
+/* 		foreach(BallFighter bf in _players.Values)
+		{
+			bool with_control = bf.GetEntityId() == _thisClientId;
+			// bf.gameObject.SetActive(with_control);
+			bf.ToggleRigidbody(with_control);
+		} */
+
+		while(!MsgQueueEmpty())
+		{
+			foreach(string id in _stateReceived.Keys)
+			{
+				if(_stateReceived[id].Count == 0)
+					continue;
+				StateSnapshot state = _stateReceived[id].Dequeue();
+				_players[id].RewindTick(state);
+			}
+		}
+
+/* 		foreach(BallFighter bf in _players.Values)
+		{
+			// bool use_simulate = bf.GetEntityId() != _thisClientId;
+			bf.UpdateAndCheckRewindTickCatched(true);
+		} */
+
+		// _players[_thisClientId].UpdateAndCheckRewindTickCatched(true);
 	}
 }
 
