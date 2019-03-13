@@ -73,6 +73,8 @@ public class PlayPlayerObject
 	{
 		// BoltNetwork.Detach(_body.MoonRig.gameObject);
 		// BoltNetwork.Detach(Char.gameObject);
+		BoltNetwork.Destroy(_body.MoonConcreteInstance);
+		BoltNetwork.Destroy(_body.ConcreteInstance);
 		BoltNetwork.Destroy(_body.MoonRig.gameObject);
 		BoltNetwork.Destroy(Char.gameObject);
 	}

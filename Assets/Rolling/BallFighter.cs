@@ -9,9 +9,13 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     public const float ERROR_THRESHOLD = 0.00001f;
 
     public GameObject MoonPrefab;
+    public GameObject MoonConcretePrefab;
     public GameObject BallConcratePrefab;
 
     private GameObject _concreteInstance;
+    private GameObject _moonConcreteInstance;
+    public GameObject ConcreteInstance{get{return _concreteInstance;}}
+    public GameObject MoonConcreteInstance{get{return _moonConcreteInstance;}}
 
     private Rigidbody _rig;
     public Rigidbody Rig{get{
@@ -60,6 +64,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
     private Vector3 _clientPosError;
     private Quaternion _clientRotError;
+    private Vector3 _clientMoonPosError;
+    private Quaternion _clientMoonRotError;
 
     #endregion
 
@@ -94,6 +100,9 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         _moon.damper = 0.2f;
         _moon.enableCollision = true;
         _moon.enablePreprocessing = true;
+
+        // moon concrete
+        _moonConcreteInstance = Instantiate(MoonConcretePrefab, moon_go.transform.position, moon_go.transform.rotation);
 
         // intialize concrete
         _concreteInstance = Instantiate(BallConcratePrefab, transform.position, transform.rotation);
@@ -149,10 +158,12 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         transform.rotation = evt.Rotation;
         _concreteInstance.transform.position = evt.Position;
         _concreteInstance.transform.rotation = evt.Rotation;
+        // MoonRig.transform.position = evt.MoonPosition;
+        // MoonRig.transform.rotation = evt.MoonRotation;
         MoonRig.transform.position = evt.MoonPosition;
         MoonRig.transform.rotation = evt.MoonRotation;
-        MoonRig.position = evt.MoonPosition;
-        MoonRig.rotation = evt.MoonRotation;
+        _moonConcreteInstance.transform.position = evt.MoonPosition;
+        _moonConcreteInstance.transform.rotation = evt.MoonRotation;
 
         // _clientInputBuffer[0] = Vector3.zero;
         // _clientStateBuffer[0].Position = evt.Position;
@@ -220,6 +231,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         {
             _concreteInstance.transform.position = transform.position;
             _concreteInstance.transform.rotation = transform.rotation;
+            _moonConcreteInstance.transform.position = _moon.transform.position;
+            _moonConcreteInstance.transform.rotation = _moon.transform.rotation;
         }
         else if(BoltNetwork.IsClient)
         {
@@ -242,19 +255,25 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         // if correction smoothing
         _clientPosError *= 0.9f;
         _clientRotError = Quaternion.Slerp(this._clientRotError, Quaternion.identity, 0.1f);
+        _clientMoonPosError *= 0.9f;
+        _clientMoonRotError = Quaternion.Slerp(this._clientMoonRotError, Quaternion.identity, 0.1f);
         // else just snap
         // _clientPosError = Vector3.zero;
         // _clientRotError = Quaternion.identity;
 
         if(_beSelf)
         {
-            _concreteInstance.transform.position = transform.position + _clientPosError;
-            _concreteInstance.transform.rotation = transform.rotation * _clientRotError;
+            _concreteInstance.transform.position = Rig.position + _clientPosError;
+            _concreteInstance.transform.rotation = Rig.rotation * _clientRotError;
+            _moonConcreteInstance.transform.position = MoonRig.position + _clientMoonPosError;
+            _moonConcreteInstance.transform.rotation = MoonRig.rotation * _clientMoonRotError;
         }
         else
         {
             _concreteInstance.transform.position = Rig.position;
             _concreteInstance.transform.rotation = Rig.rotation;
+            _moonConcreteInstance.transform.position = MoonRig.position;
+            _moonConcreteInstance.transform.rotation = MoonRig.rotation;
         }
 
         // Rig.position = 
@@ -278,8 +297,11 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         if(position_err.sqrMagnitude > ERROR_THRESHOLD || moon_position_err.sqrMagnitude > ERROR_THRESHOLD )
         {
             // capture the current predicted pos for smoothing
-            Vector3 prev_pos = transform.position + this._clientPosError;
-            Quaternion prev_rot = transform.rotation * this._clientRotError;
+            Vector3 prev_pos = Rig.position + this._clientPosError;
+            Quaternion prev_rot = Rig.rotation * this._clientRotError;
+
+            Vector3 prev_moon_pos = MoonRig.position + this._clientMoonPosError;
+            Quaternion prev_moon_rot = MoonRig.rotation * this._clientMoonRotError;
 
             // rewind a replay
             Rig.position = state.Position;
@@ -328,7 +350,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 ++rewind_tick_number;
             }
 
-            // TODO: correction smoothing
+            // correction smoothing
             // 让物理模拟与显示分离
             // 物理负责同步，显示部分利用每次的误差来做插值
 
@@ -340,8 +362,19 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             }
             else
             {
-                _clientPosError = prev_pos - transform.position;
-                _clientRotError = Quaternion.Inverse(transform.rotation) * prev_rot;
+                _clientPosError = prev_pos - Rig.position;
+                _clientRotError = Quaternion.Inverse(Rig.rotation) * prev_rot;
+            }
+
+            if((prev_moon_pos - MoonRig.position).sqrMagnitude >= 4.0f)
+            {
+                _clientMoonPosError = Vector3.zero;
+                _clientMoonRotError = Quaternion.identity;
+            }
+            else
+            {
+                _clientMoonPosError = prev_moon_pos - MoonRig.position;
+                _clientMoonRotError = Quaternion.Inverse(MoonRig.rotation) * prev_moon_rot;
             }
         }
     }
