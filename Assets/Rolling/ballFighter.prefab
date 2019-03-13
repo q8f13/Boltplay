@@ -61,7 +61,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 12d5a8d6a4388b94fb9a5a916b738171, type: 2}
+  - {fileID: 2100000, guid: 1143cfeb2a2f133478612025739f8623, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -123,6 +123,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MoonPrefab: {fileID: 178, guid: f8098a300c62a76458d08963f446b83c, type: 3}
+  BallConcratePrefab: {fileID: 177, guid: 37d4e89e5a4401b4198f147584e83424, type: 3}
   _forceMultiplier: 30
   _input: 1
 --- !u!114 &285

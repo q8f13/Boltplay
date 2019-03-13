@@ -9,6 +9,9 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     public const float ERROR_THRESHOLD = 0.00001f;
 
     public GameObject MoonPrefab;
+    public GameObject BallConcratePrefab;
+
+    private GameObject _concreteInstance;
 
     private Rigidbody _rig;
     public Rigidbody Rig{get{
@@ -60,6 +63,10 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
     #endregion
 
+    #region RedundantInputs
+    private int _clientLastReceivedStateTick;
+    #endregion
+
     private bool _beSelf = false;
 
     public override void ControlGained()
@@ -75,7 +82,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     public override void Attached()
     {
         _rig = GetComponent<Rigidbody>();
-        _mr =GetComponent<MeshRenderer>();
 
         // initialize moon
         GameObject moon_go = Instantiate(MoonPrefab, transform.position + Vector3.right * 0.5f, Quaternion.identity);
@@ -88,6 +94,10 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         _moon.damper = 0.2f;
         _moon.enableCollision = true;
         _moon.enablePreprocessing = true;
+
+        // intialize concrete
+        _concreteInstance = Instantiate(BallConcratePrefab, transform.position, transform.rotation);
+        _mr = _concreteInstance.GetComponent<MeshRenderer>();
 
         // set color
         // state.SetTransforms(state.BallTransform, transform);
@@ -137,6 +147,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     {
         transform.position = evt.Position;
         transform.rotation = evt.Rotation;
+        _concreteInstance.transform.position = evt.Position;
+        _concreteInstance.transform.rotation = evt.Rotation;
         MoonRig.transform.position = evt.MoonPosition;
         MoonRig.transform.rotation = evt.MoonRotation;
         MoonRig.position = evt.MoonPosition;
@@ -201,25 +213,31 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         return entity.networkId.PackedValue.ToString();
     }
 
-    public void ToggleRigidbody(bool on)
-    {
-        _rig.isKinematic = !on;
-        MoonRig.isKinematic = !on;
-    }
-
     private void FixedUpdate() {
-        UpdateAndCheckRewindTickCatched(true);
+        if(!_attached)
+            return;
+        if(BoltNetwork.IsServer)
+        {
+            _concreteInstance.transform.position = transform.position;
+            _concreteInstance.transform.rotation = transform.rotation;
+        }
+        else if(BoltNetwork.IsClient)
+        {
+            UpdateAndCheckRewindTickCatched(true);
+        }
     }
 
     void UpdateAndCheckRewindTickCatched(bool withSimulate)
     {
-        if(_stateMsgReceived.Count == 0)
-            return;
+        if(_stateMsgReceived.Count > 0)
+        {
+            StateSnapshot state = _stateMsgReceived.Pop();
+            RewindTick(state); 
 
-        StateSnapshot state = _stateMsgReceived.Pop();
-        RewindTick(state); 
+            _clientLastReceivedStateTick = state.TickNumber;
 
-        _stateMsgReceived.Clear();
+            _stateMsgReceived.Clear();
+        }
 
         // if correction smoothing
         _clientPosError *= 0.9f;
@@ -227,6 +245,17 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         // else just snap
         // _clientPosError = Vector3.zero;
         // _clientRotError = Quaternion.identity;
+
+        if(_beSelf)
+        {
+            _concreteInstance.transform.position = transform.position + _clientPosError;
+            _concreteInstance.transform.rotation = transform.rotation * _clientRotError;
+        }
+        else
+        {
+            _concreteInstance.transform.position = Rig.position;
+            _concreteInstance.transform.rotation = Rig.rotation;
+        }
 
         // Rig.position = 
         // Rig.position = _rigProxyPosition + _clientPosError;
@@ -249,8 +278,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         if(position_err.sqrMagnitude > ERROR_THRESHOLD || moon_position_err.sqrMagnitude > ERROR_THRESHOLD )
         {
             // capture the current predicted pos for smoothing
-            Vector3 prev_pos = Rig.position + this._clientPosError;
-            Quaternion prev_rot = Rig.rotation * this._clientRotError;
+            Vector3 prev_pos = transform.position + this._clientPosError;
+            Quaternion prev_rot = transform.rotation * this._clientRotError;
 
             // rewind a replay
             Rig.position = state.Position;
@@ -311,8 +340,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             }
             else
             {
-                _clientPosError = prev_pos - Rig.position;
-                _clientRotError = Quaternion.Inverse(Rig.rotation) * prev_rot;
+                _clientPosError = prev_pos - transform.position;
+                _clientRotError = Quaternion.Inverse(transform.rotation) * prev_rot;
             }
         }
     }
