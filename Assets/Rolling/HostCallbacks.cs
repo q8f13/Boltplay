@@ -7,18 +7,29 @@ public class HostCallbacks : Bolt.GlobalEventListener {
     // private Queue<InputSender> _playerInputs = new Queue<InputSender>();
     private Dictionary<string, Rigidbody> _players = new Dictionary<string, Rigidbody>();
 
+	// private Dictionary<string, Queue<InputSnapshot>> _playerInputs = new Dictionary<string, Queue<InputSnapshot>>();
 	private Dictionary<string, Queue<InputSender>> _playerInputs = new Dictionary<string, Queue<InputSender>>();
 
-	private Queue<InputSender> _playerInputRelay = new Queue<InputSender>();
+	// private Queue<InputSnapshot> _playerInputRelay = new Queue<InputSnapshot>();
+	private Queue<InputSnapshot> _playerInputRelay = new Queue<InputSnapshot>();
+	// private Queue<InputSender> _playerInputRelay = new Queue<InputSender>();
 	// private Dictionary<string, InputSender> _playerInputRelay = new Dictionary<string, InputSender>();	
 
 	private PlayPlayerObject _serverPlayer;
 
 	private int _serverTick;
 
+	private int _serverSnapshotRateAccumulate = 0;
+	private const int SERVER_SNAPSHOT_RATE = 60;
+
 	private void Start() 
 	{
 		PlayerRegistry.CreatePlayerOnHost();
+	}
+
+	public override void BoltStartBegin()
+	{
+		BoltNetwork.RegisterTokenClass<InputArrayToken>();
 	}
 
 	public override void SceneLoadLocalDone(string scene)
@@ -67,10 +78,25 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 		if(!_playerInputs.ContainsKey(id))
 			_playerInputs.Add(id, new Queue<InputSender>());
         _playerInputs[id].Enqueue(evnt);
+
+		// if(!_playerInputs.ContainsKey(id))
+		// 	_playerInputs.Add(id, new Queue<InputSender>());
+
+		// Vector2[] inputs = ((InputArrayToken)(evnt.InputArray)).GetInputs;
+		// for(int i=0;i<inputs.Length;i++)
+		// {
+		// 	InputSnapshot ss = new InputSnapshot();
+		// 	ss.EntityId = id;
+		// 	ss.TickNumber = evnt.TickNumber;
+		// 	ss.CountThisWave = inputs.Length;
+		// 	ss.Input = inputs[i];
+		// 	_playerInputs[id].Enqueue(ss);
+		// }
 	}	
 
 	bool PlayerInputEmpty()
 	{
+		// foreach(Queue<InputSnapshot> input in _playerInputs.Values)
 		foreach(Queue<InputSender> input in _playerInputs.Values)
 		{
 			if(input.Count > 0)
@@ -86,6 +112,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 			_serverPlayer.GetBody.LocalSimulateTick(false);
 
 		int server_tick = _serverTick;
+		int server_rate_accumulator = _serverSnapshotRateAccumulate;
 
 		// collect player inputs and simulate them with same step
         while(!PlayerInputEmpty())
@@ -100,31 +127,43 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 				}
 
 				InputSender evt = _playerInputs[id].Dequeue();
+				// InputSnapshot snapshot = _playerInputs[id].Dequeue();
 
 				InputArrayToken input_token = (InputArrayToken)evt.InputArray;
+				Vector2[] inputs = input_token.GetInputs;
 
 				int max_tick = evt.TickNumber + input_token.Count - 1;
+				// int max_tick = snapshot.TickNumber + snapshot.CountThisWave - 1;
 
-				if(max_tick >= server_tick)
+				if(max_tick >= server_tick * _playerInputs.Count)
 				{
-					int start_i = server_tick > evt.TickNumber ? (server_tick - evt.TickNumber) : 0;
-				}
+					int start_i = (server_tick * _playerInputs.Count) > evt.TickNumber ? ((server_tick * _playerInputs.Count) - evt.TickNumber) : 0;
+					Rigidbody playerRig = _players[evt.EntityId];
+					for(int i=start_i;i<input_token.Count;++i)
+					{
+						AddForceToRigid(playerRig, inputs[i]);
 
-				Rigidbody playerRig = _players[evt.EntityId];
-				Vector2[] inputs = input_token.GetInputs;
-				for(int i=0;i<inputs.Length;i++)
-				{
-					AddForceToRigid(playerRig, inputs[i]);
-				}
+						++server_tick;
+						++server_rate_accumulator;
 
-				_playerInputRelay.Enqueue(evt);
+						if(server_rate_accumulator >= SERVER_SNAPSHOT_RATE)
+						{
+							server_rate_accumulator = 0;
+
+							InputSnapshot snapshot = new InputSnapshot();
+							snapshot.EntityId = evt.EntityId;
+							snapshot.TickNumber = evt.TickNumber;
+							snapshot.Input = inputs[i];
+							_playerInputRelay.Enqueue(snapshot);
+						}
+					}
+				}
 				// AddForceToRigid(playerRig, evt.InputParam);
 
 /* 				if(_playerInputRelay.ContainsKey(id))
 					_playerInputRelay[id] = evt;
 				else
 					_playerInputRelay.Add(id, evt); */
-				
 			}
 
 			Physics.Simulate(Time.fixedDeltaTime);
@@ -132,12 +171,19 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 			while(_playerInputRelay.Count > 0)
 			{
-				InputSender evt = _playerInputRelay.Dequeue();
-				if(evt == null)
+				// InputSender evt = _playerInputRelay.Dequeue();
+				InputSnapshot evt = _playerInputRelay.Dequeue();
+				// if(evt == null)
+				// 	continue;
+				if(evt.TickNumber < 0)
 					continue;
 
 				Rigidbody playerRig = _players[evt.EntityId];
 
+				if(_serverSnapshotRateAccumulate < SERVER_SNAPSHOT_RATE)
+					continue;
+
+				_serverSnapshotRateAccumulate = 0;
 				// create simulate result and reply to client
 				// for client prediction error correcting
 				StateMsg state = StateMsg.Create(Bolt.GlobalTargets.AllClients);
@@ -148,7 +194,8 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 				state.RigAngularVelocity = playerRig.angularVelocity;
 				state.EntityId = evt.EntityId;
 				state.TickNumber = evt.TickNumber + 1;
-				state.StateInput = evt.InputParam;
+				state.StateInput = evt.Input;
+				// state.StateInput = evt.InputParam;
 				// moon
 				BallFighter bf = playerRig.GetComponent<BallFighter>();
 				state.MoonPosition = bf.MoonRig.position;
@@ -186,6 +233,9 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 			} */
         }
 
+		_serverSnapshotRateAccumulate = server_rate_accumulator;
+		_serverTick = server_tick;
+
 /*         foreach(Rigidbody rig in _players.Values)
         {
             BallFighter bf = rig.GetComponent<BallFighter>();
@@ -200,7 +250,10 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 	#endregion
 }
 
-public class InputSnapshot
+public struct InputSnapshot
 {
-	public Vector2[] _inputs;
+	public string EntityId;
+	public int TickNumber;
+	public int CountThisWave;
+	public Vector2 Input;
 }

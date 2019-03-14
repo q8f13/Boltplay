@@ -16,6 +16,11 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 	// private Dictionary<string, Queue<StateSnapshot>> _stateReceived = new Dictionary<string, Queue<StateSnapshot>>();
 
+	public override void BoltStartBegin()
+	{
+		BoltNetwork.RegisterTokenClass<InputArrayToken>();
+	}
+
 	public override void OnEvent(PlayerCreated evnt)
 	{
 		_players[evnt.EntityId].UpdateWhenCreated(evnt);
