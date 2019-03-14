@@ -45,7 +45,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     // public BoltEntity MoonEntity{get{return _moonEntity;}}
 
     private Vector2 _currentInput;
-    public Vector2 CurrentInput{get{return _currentInput;}}
 
 
     #region ClientPrediction
@@ -71,6 +70,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
     #region RedundantInputs
     private int _clientLastReceivedStateTick;
+    private List<Vector2> _inputRelay = new List<Vector2>();
     #endregion
 
     private bool _beSelf = false;
@@ -187,16 +187,10 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         {
             Vector2 input = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
 
+            Debug.LogFormat("new input {0}", input);
+
             _timer -= Time.fixedDeltaTime;
 
-            // TODO: 这里需要加上检查上次state的ticknumber
-            // 将当前tick与上次ticknumber相差的input buffer都发出去
-            // 即redundant input message
-            InputSender evt = InputSender.Create(Bolt.GlobalTargets.OnlyServer);
-            evt.InputParam = input;
-            evt.TickNumber = _tickNumber;
-            evt.EntityId = entity.networkId.PackedValue.ToString();
-            evt.Send();
 
             int slot = _tickNumber % 1024;
             _clientInputBuffer[slot] = input;
@@ -212,7 +206,25 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
                 // Physics.SyncTransforms();
             }
 
-            _currentInput = input;
+            // 这里需要加上检查上次state的ticknumber
+            // 将当前tick与上次ticknumber相差的input buffer都发出去
+            // 即redundant input message
+
+            _inputRelay.Clear();
+
+            for(int i=_clientLastReceivedStateTick;i<=_tickNumber;++i)
+            {
+                _inputRelay.Add(_clientInputBuffer[i % 1024]);
+            }
+
+            InputSender evt = InputSender.Create(Bolt.GlobalTargets.OnlyServer);
+            // evt.InputParam = input;
+            evt.TickNumber = _clientLastReceivedStateTick;
+            // evt.TickNumber = _tickNumber;
+            evt.EntityId = entity.networkId.PackedValue.ToString();
+            InputArrayToken input_token = new InputArrayToken(_inputRelay.ToArray());
+            evt.InputArray = input_token;
+            evt.Send();
 
             // if(withSimulate)
             ++_tickNumber;

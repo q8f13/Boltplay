@@ -14,6 +14,8 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 	private PlayPlayerObject _serverPlayer;
 
+	private int _serverTick;
+
 	private void Start() 
 	{
 		PlayerRegistry.CreatePlayerOnHost();
@@ -53,6 +55,9 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 	#region Events
 	public override void OnEvent(InputSender evnt)
 	{
+		// TODO: 这里需要将收到的inputSender重新拆出来
+		// 组织到对应entityId的Vector2[]里
+		// 这样才好在后面的循环更新中保证物理simulate的步调一致
         string id = evnt.EntityId;
 		if(string.IsNullOrEmpty(id))
 		{
@@ -80,6 +85,8 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 		if(_serverPlayer != null)
 			_serverPlayer.GetBody.LocalSimulateTick(false);
 
+		int server_tick = _serverTick;
+
 		// collect player inputs and simulate them with same step
         while(!PlayerInputEmpty())
         {
@@ -94,15 +101,30 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 				InputSender evt = _playerInputs[id].Dequeue();
 
+				InputArrayToken input_token = (InputArrayToken)evt.InputArray;
+
+				int max_tick = evt.TickNumber + input_token.Count - 1;
+
+				if(max_tick >= server_tick)
+				{
+					int start_i = server_tick > evt.TickNumber ? (server_tick - evt.TickNumber) : 0;
+				}
+
 				Rigidbody playerRig = _players[evt.EntityId];
-				AddForceToRigid(playerRig, evt.InputParam);
+				Vector2[] inputs = input_token.GetInputs;
+				for(int i=0;i<inputs.Length;i++)
+				{
+					AddForceToRigid(playerRig, inputs[i]);
+				}
+
+				_playerInputRelay.Enqueue(evt);
+				// AddForceToRigid(playerRig, evt.InputParam);
 
 /* 				if(_playerInputRelay.ContainsKey(id))
 					_playerInputRelay[id] = evt;
 				else
 					_playerInputRelay.Add(id, evt); */
 				
-				_playerInputRelay.Enqueue(evt);
 			}
 
 			Physics.Simulate(Time.fixedDeltaTime);
@@ -176,4 +198,9 @@ public class HostCallbacks : Bolt.GlobalEventListener {
         rig.AddForce(new Vector3(input.x, 0, input.y) * 30.0f, ForceMode.Force);
     }
 	#endregion
+}
+
+public class InputSnapshot
+{
+	public Vector2[] _inputs;
 }
