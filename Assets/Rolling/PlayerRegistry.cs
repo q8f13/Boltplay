@@ -79,7 +79,7 @@ public class PlayPlayerObject
 		BoltNetwork.Destroy(Char.gameObject);
 	}
 
-	public PlayPlayerObject Spawn()
+	public PlayPlayerObject Spawn(int server_tick)
 	{
 		Vector3 spawn_pos = new Vector3(Random.Range(-4,4), 4, Random.Range(-4,4));
 		if(!Char)
@@ -103,6 +103,7 @@ public class PlayPlayerObject
 		create_evt.MoonPosition = spawn_pos + Vector3.right * 0.5f;
 		create_evt.MoonRotation = Quaternion.identity;
 		create_evt.EntityId = Char.networkId.PackedValue.ToString();
+		create_evt.ServerTick = server_tick;
 		create_evt.Send();
 		// _body.MoonRig.transform.position = spawn_pos + Vector3.right * 0.5f;
 

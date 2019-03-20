@@ -58,8 +58,9 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     private int _rewindTickCount = 0;
     public int RewindTickCount{get{return _rewindTickCount;}}
 
-    private Stack<StateSnapshot> _stateMsgReceived = new Stack<StateSnapshot>();
-    public int StateMsgReceivedCount{get{return _stateMsgReceived.Count;}}
+    // private Stack<StateSnapshot> _stateMsgReceived = new Stack<StateSnapshot>();
+    private StateSnapshot _lastStateReceived;
+    // public int StateMsgReceivedCount{get{return _stateMsgReceived.Count;}}
 
     private Vector3 _clientPosError;
     private Quaternion _clientRotError;
@@ -71,6 +72,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     #region RedundantInputs
     private int _clientLastReceivedStateTick;
     private List<Vector2> _inputRelay = new List<Vector2>();
+    private System.Text.StringBuilder _sb = new System.Text.StringBuilder(500);
     #endregion
 
     private bool _beSelf = false;
@@ -165,6 +167,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         _moonConcreteInstance.transform.position = evt.MoonPosition;
         _moonConcreteInstance.transform.rotation = evt.MoonRotation;
 
+        _clientLastReceivedStateTick = evt.ServerTick;
+
         // _clientInputBuffer[0] = Vector3.zero;
         // _clientStateBuffer[0].Position = evt.Position;
         // _clientStateBuffer[0].Rotation = evt.Rotation;
@@ -191,7 +195,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
             _timer -= Time.fixedDeltaTime;
 
-
             int slot = _tickNumber % 1024;
             _clientInputBuffer[slot] = input;
             _clientStateBuffer[slot].Position = Rig.position;
@@ -211,7 +214,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             // 即redundant input message
 
             _inputRelay.Clear();
-
             for(int i=_clientLastReceivedStateTick;i<=_tickNumber;++i)
             {
                 _inputRelay.Add(_clientInputBuffer[i % 1024]);
@@ -219,16 +221,36 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
             InputSender evt = InputSender.Create(Bolt.GlobalTargets.OnlyServer);
             // evt.InputParam = input;
-            evt.TickNumber = _clientLastReceivedStateTick;
+            evt.TickNumber = _tickNumber;
+            // evt.TickNumber = _clientLastReceivedStateTick;
+            string id = GetEntityId();
             // evt.TickNumber = _tickNumber;
-            evt.EntityId = entity.networkId.PackedValue.ToString();
-            InputArrayToken input_token = new InputArrayToken(_inputRelay.ToArray());
-            evt.InputArray = input_token;
+            evt.EntityId = id;
+            evt.InputStrRaw = CompressInputMessage(_inputRelay.ToArray());
+            // InputArrayToken input_token = new InputArrayToken(_inputRelay.ToArray());
+            // evt.InputArray = input_token;
             evt.Send();
+
+            if(withSimulate)
+                Debug.LogWarningFormat("{0} send input message count {1}, current tick {2}", id, _inputRelay.Count, _clientLastReceivedStateTick);
 
             // if(withSimulate)
             ++_tickNumber;
         }
+    }
+
+    string CompressInputMessage(Vector2[] inputs)
+    {
+        _sb.Remove(0, _sb.Length);
+
+		for(int i=0;i<inputs.Length;i++)
+		{
+            if(i>0)
+                _sb.Append('|');
+            _sb.Append(inputs[i].ToString());
+		}
+
+        return _sb.ToString();
     }
 
     public string GetEntityId()
@@ -245,6 +267,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             _concreteInstance.transform.rotation = transform.rotation;
             _moonConcreteInstance.transform.position = _moon.transform.position;
             _moonConcreteInstance.transform.rotation = _moon.transform.rotation;
+
+            _clientLastReceivedStateTick = _tickNumber > 0 ? _tickNumber - 1 : 0;
         }
         else if(BoltNetwork.IsClient)
         {
@@ -254,7 +278,14 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
     void UpdateAndCheckRewindTickCatched(bool withSimulate)
     {
-        if(_stateMsgReceived.Count > 0)
+        if(_lastStateReceived == null)
+            return;
+        RewindTick(_lastStateReceived);
+
+        _clientLastReceivedStateTick = _lastStateReceived.TickNumber;
+        Debug.LogWarningFormat("{0} update last state tick to {1}", GetEntityId(), _clientLastReceivedStateTick);
+
+/*         if(_stateMsgReceived.Count > 0)
         {
             StateSnapshot state = _stateMsgReceived.Pop();
             RewindTick(state); 
@@ -262,7 +293,7 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             _clientLastReceivedStateTick = state.TickNumber;
 
             _stateMsgReceived.Clear();
-        }
+        } */
 
         // if correction smoothing
         _clientPosError *= 0.9f;
@@ -398,7 +429,9 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             Debug.LogError("enqueue: invalid entity id");
             return;
         }
-        _stateMsgReceived.Push(evnt);
+        // _stateMsgReceived.Push(evnt);
+        Debug.LogWarningFormat("{0} received state snapshot with ticknumber {1}", evnt.EntityId, evnt.TickNumber);
+        _lastStateReceived = evnt;
     }
 
 

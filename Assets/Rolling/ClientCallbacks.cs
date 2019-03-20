@@ -16,10 +16,10 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 
 	// private Dictionary<string, Queue<StateSnapshot>> _stateReceived = new Dictionary<string, Queue<StateSnapshot>>();
 
-	public override void BoltStartBegin()
-	{
-		BoltNetwork.RegisterTokenClass<InputArrayToken>();
-	}
+	// public override void BoltStartBegin()
+	// {
+	// 	BoltNetwork.RegisterTokenClass<InputArrayToken>();
+	// }
 
 	public override void OnEvent(PlayerCreated evnt)
 	{
@@ -41,11 +41,11 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 			return;
 		}
 
-		// if(!_stateMsgCount.ContainsKey(snapshot.EntityId))
-		// 	_stateMsgCount.Add(snapshot.EntityId, 0);
-		// _stateMsgCount[snapshot.EntityId]++;
+		if(!_stateMsgCount.ContainsKey(snapshot.EntityId))
+			_stateMsgCount.Add(snapshot.EntityId, 0);
+		_stateMsgCount[snapshot.EntityId]++;
 
-		_players[evnt.EntityId].ReceiveState(snapshot);
+		_players[snapshot.EntityId].ReceiveState(snapshot);
 		// if(!_stateReceived.ContainsKey(evnt.EntityId))
 		// 	_stateReceived.Add(evnt.EntityId, new Queue<StateSnapshot>());
 		// _stateReceived[evnt.EntityId].Enqueue(snapshot);
@@ -103,7 +103,8 @@ public class ClientCallbacks : Bolt.GlobalEventListener {
 			// int count = 0;
 			// if(_stateMsgCount.ContainsKey(id))
 			// 	count = _stateMsgCount[id];
-			GUILayout.Label(string.Format("{0} received count {1}",id, _players[id].RewindTickCount));
+			if(_stateMsgCount.ContainsKey(id))
+				GUILayout.Label(string.Format("{0} received count {1}",id, _stateMsgCount[id]));
 		}
 		GUILayout.EndVertical();
 	}
