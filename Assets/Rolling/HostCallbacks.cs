@@ -4,13 +4,11 @@ using System.Collections.Generic;
 
 [BoltGlobalBehaviour(BoltNetworkModes.Server, "rolling")]
 public class HostCallbacks : Bolt.GlobalEventListener {
-    // private Queue<InputSender> _playerInputs = new Queue<InputSender>();
     private Dictionary<string, Rigidbody> _players = new Dictionary<string, Rigidbody>();
 
 	private Dictionary<string, Queue<InputSender>> _playerInputs = new Dictionary<string, Queue<InputSender>>();
 
 	private Queue<InputSender> _playerInputRelay = new Queue<InputSender>();
-	// private Dictionary<string, InputSender> _playerInputRelay = new Dictionary<string, InputSender>();	
 
 	private PlayPlayerObject _serverPlayer;
 
@@ -45,7 +43,6 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 		string entity_id = player.GetBody.GetEntityId();
 		_players.Remove(entity_id);
 		_playerInputs.Remove(entity_id);
-		// _playerInputRelay.Remove(entity_id);
 
 		player.SelfDestroy();
 	}
@@ -88,7 +85,6 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 			{
 				if(_playerInputs[id].Count == 0)
 				{
-					// _playerInputRelay[id] = null;
 					continue;
 				}
 
@@ -96,11 +92,6 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 				Rigidbody playerRig = _players[evt.EntityId];
 				AddForceToRigid(playerRig, evt.InputParam);
-
-/* 				if(_playerInputRelay.ContainsKey(id))
-					_playerInputRelay[id] = evt;
-				else
-					_playerInputRelay.Add(id, evt); */
 				
 				_playerInputRelay.Enqueue(evt);
 			}
@@ -135,40 +126,7 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 				state.MoonAngularVelocity = bf.MoonRig.angularVelocity;
 				state.Send();
 			}
-
-/* 			foreach(string id in _playerInputRelay.Keys)
-			{
-				InputSender evt = _playerInputRelay[id];
-				if(evt == null)
-					continue;
-				Rigidbody playerRig = _players[id];
-
-				// create simulate result and reply to client
-				// for client prediction error correcting
-				StateMsg state = StateMsg.Create(Bolt.GlobalTargets.AllClients);
-				// ball
-				state.RigPosition = playerRig.position;
-				state.RigRotation = playerRig.rotation;
-				state.RigVelocity = playerRig.velocity;
-				state.RigAngularVelocity = playerRig.angularVelocity;
-				state.EntityId = evt.EntityId;
-				state.TickNumber = evt.TickNumber + 1;
-				state.StateInput = evt.InputParam;
-				// moon
-				BallFighter bf = playerRig.GetComponent<BallFighter>();
-				state.MoonPosition = bf.MoonRig.position;
-				state.MoonRotation = bf.MoonRig.rotation;
-				state.MoonVelocity = bf.MoonRig.velocity;
-				state.MoonAngularVelocity = bf.MoonRig.angularVelocity;
-				state.Send();
-			} */
-        }
-
-/*         foreach(Rigidbody rig in _players.Values)
-        {
-            BallFighter bf = rig.GetComponent<BallFighter>();
-            bf.Tick();
-        } */
+		}
 	}
 
     void AddForceToRigid(Rigidbody rig, Vector2 input)

@@ -25,7 +25,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     private InputSource _input;
 
     private SpringJoint _moon;
-    // private BoltEntity _moonEntity;
     public Rigidbody MoonRig{
         get
         {
@@ -35,7 +34,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         }
     }
     private Rigidbody _moonRig;
-    // public BoltEntity MoonEntity{get{return _moonEntity;}}
 
     private Vector2 _currentInput;
     public Vector2 CurrentInput{get{return _currentInput;}}
@@ -103,33 +101,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             _mr.material.color = state.BallColor;
         });
 
-/*         state.AddCallback("BallRig", ()=>
-        {
-            _rig.velocity = state.BallRig.RigVelocity;
-            _rig.drag = state.BallRig.Drag;
-            _rig.angularDrag = state.BallRig.AngularDrag;
-            _rig.angularVelocity = state.BallRig.AngulalrVelocity;
-        });
-
-         state.addcallback("balltransform", ()=>
-        {
-            transform.position = state.balltransform.position;
-            transform.rotation = state.balltransform.rotation;
-        }); */ 
-
-        // state.AddCallback("BallTransform", ()=>
-        // {
-        //     transform.position = state.BallTransform.Position;
-        //     transform.rotation = state.BallTransform.Rotation;
-        // });
-
-        // state.AddCallback("MoonTransform", ()=>
-        // {
-        //     _moon.transform.position = state.MoonTransform.Position;
-        //     _moon.transform.rotation = state.MoonTransform.Rotation;
-        //     _moon.transform.localScale = Vector3.one * 0.5f;
-        // });
-
         _attached = true;
     }
 
@@ -141,12 +112,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         MoonRig.transform.rotation = evt.MoonRotation;
         MoonRig.position = evt.MoonPosition;
         MoonRig.rotation = evt.MoonRotation;
-
-        // _clientInputBuffer[0] = Vector3.zero;
-        // _clientStateBuffer[0].Position = evt.Position;
-        // _clientStateBuffer[0].Rotation = evt.Rotation;
-        // _clientStateBuffer[0].MoonPosition = evt.MoonPosition;
-        // _clientStateBuffer[0].MoonRotation = evt.MoonRotation;
     }
 
     public override void Detached()
@@ -183,12 +148,10 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             {
                 AddForceToRigid(input);
                 Physics.Simulate(Time.fixedDeltaTime);
-                // Physics.SyncTransforms();
             }
 
             _currentInput = input;
 
-            // if(withSimulate)
             ++_tickNumber;
         }
     }
@@ -225,9 +188,6 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         // _clientPosError = Vector3.zero;
         // _clientRotError = Quaternion.identity;
 
-        // Rig.position = 
-        // Rig.position = _rigProxyPosition + _clientPosError;
-        // Rig.rotation = _rigProxyRotation * _clientRotError;
     }
 
     // client在local player没有输入信息要同步的时候（应该也就是不需要rewind的时候）
@@ -239,12 +199,9 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
     // 需要想个办法让这个次数一致
     void RewindTick(StateSnapshot state)
     {
-        // StateMsg state = stateMsgQ.Dequeue();
-
         int slot = state.TickNumber % 1024;
         Vector3 position_err = state.Position - this._clientStateBuffer[slot].Position;
         Vector3 moon_position_err = state.MoonPosition - this._clientStateBuffer[slot].MoonPosition;
-        // Vector2 input = state.StateInput;
 
         if(position_err.sqrMagnitude > ERROR_THRESHOLD || moon_position_err.sqrMagnitude > ERROR_THRESHOLD )
         {
@@ -266,24 +223,13 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
             Color clr = new Color(slot / 1024.0f, 0, 0);
             Debug.DrawRay(state.Position, Vector3.up * 0.5f, clr, 0.5f);
 
-            // transform.position = state.Position;
-            // transform.rotation = state.Rotation;
-
-            // MoonRig.transform.position = state.MoonPosition;
-            // MoonRig.transform.rotation = state.MoonRotation;
-
-            // _moon.
             _rewindTickCount++;
-            // _currentInput = state.StateInput;
 
             int rewind_tick_number = state.TickNumber;
             while(rewind_tick_number < _tickNumber)
             {
-                // float ratio = (rewind_tick_number - state.TickNumber) / (_tickNumber - state.TickNumber);
-                // ratio = Mathf.Clamp01(ratio);
                 int rw_slot = rewind_tick_number % 1024;
                 _clientInputBuffer[rw_slot] = state.StateInput;
-                // _clientInputBuffer[rw_slot] = _currentInput;
                 _clientStateBuffer[rw_slot].Position = Rig.position;
                 _clientStateBuffer[rw_slot].Rotation = Rig.rotation;
                 _clientStateBuffer[rw_slot].MoonPosition = MoonRig.position;
@@ -291,10 +237,8 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
 
                 Debug.LogFormat("save input buffer: id {0}, tick {1}, position {2}", this.GetEntityId(), rewind_tick_number, Rig.position);
 
-                // AddForceToRigid(_currentInput);
                 AddForceToRigid(state.StateInput);
                 Physics.Simulate(Time.fixedDeltaTime);
-                // Physics.SyncTransforms();
 
                 ++rewind_tick_number;
             }
@@ -323,44 +267,11 @@ public class BallFighter : Bolt.EntityEventListener<IBallState>
         _stateMsgReceived.Push(evnt);
     }
 
-
-    // private void Update() {
-    //     if(Application.isEditor)
-    //     {
-    //         switch(_input)
-    //         {
-    //             case InputSource.Keyboard:
-    //                 _currentForce.x = Input.GetAxis("Horizontal");
-    //                 _currentForce.y = Input.GetAxis("Vertical");
-    //                 break;
-    // /*             case InputSource.Mouse:
-    //                 _currentForce.x = Input.GetAxis("Mouse X");
-    //                 _currentForce.y = Input.GetAxis("Mouse Y");
-    //                 break; */
-    //         }
-    //     }
-
-    //     state.SetTransforms(state.BallTransform, transform);
-    // }
-
     void AddForceToRigid(Vector2 input)
     {
         Rig.AddForce(new Vector3(input.x, 0, input.y) * _forceMultiplier, ForceMode.Force);
     }
-
-    // private void FixedUpdate() {
-    //     if(_rig == null)
-    //         _rig = GetComponent<Rigidbody>();
-
-    //     _rig.AddForce(new Vector3(_currentForce.x, 0, _currentForce.y) * _forceMultiplier, ForceMode.Force);
-    // }
 }   
-
-/* public interface IClientSync
-{
-    void Register(Bolt.IEntityBehaviour entity);
-    void Unregister(Bolt.IEntityBehaviour entity);
-} */
 
 public enum InputSource
 {
