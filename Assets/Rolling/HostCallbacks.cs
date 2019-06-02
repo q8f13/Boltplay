@@ -63,13 +63,16 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 
 	bool PlayerInputEmpty()
 	{
+		if(_playerInputs.Count == 0)
+			return true;
+		
 		foreach(Queue<InputSender> input in _playerInputs.Values)
 		{
-			if(input.Count > 0)
-				return false;
+			if(input.Count == 0)
+				return true;
 		}
 
-		return true;
+		return false;
 	}
 
 	private void Update() {
@@ -85,15 +88,19 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 			{
 				if(_playerInputs[id].Count == 0)
 				{
-					continue;
+					break;
+					// continue;
 				}
 
 				InputSender evt = _playerInputs[id].Dequeue();
 
-				Rigidbody playerRig = _players[evt.EntityId];
-				AddForceToRigid(playerRig, evt.InputParam);
-				
-				_playerInputRelay.Enqueue(evt);
+				if(evt != null)
+				{
+					Rigidbody playerRig = _players[evt.EntityId];
+					AddForceToRigid(playerRig, evt.InputParam);
+					
+					_playerInputRelay.Enqueue(evt);
+				}
 			}
 
 			Physics.Simulate(Time.fixedDeltaTime);
@@ -127,6 +134,11 @@ public class HostCallbacks : Bolt.GlobalEventListener {
 				state.Send();
 			}
 		}
+
+		// foreach (string id in _playerInputs.Keys)
+		// {
+		// 	_playerInputs[id].Clear();
+		// }
 	}
 
     void AddForceToRigid(Rigidbody rig, Vector2 input)
